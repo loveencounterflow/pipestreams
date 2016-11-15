@@ -1,0 +1,33 @@
+{
+  "name": "pipestreams",
+  "version": "0.0.0",
+  "description": "experimental streaming",
+  "main": "lib/main.js",
+  "scripts": {
+    "build": "coffee --map -o lib -c src",
+    "doctoc": "doctoc README.md",
+    "test": "npm run build && node lib/tests.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/loveencounterflow/pipestreams.git"
+  },
+  "keywords": [
+    "pipes",
+    "streams",
+    "through2",
+    "benchmarks"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/loveencounterflow/pipestreams/issues"
+  },
+  "homepage": "https://github.com/loveencounterflow/pipestreams",
+  "dependencies": {
+    "cnd": "^4.2.0",
+    "coffeenode-suspend": "^0.1.11",
+    "pipedreams": "^6.3.2"
+  },
+  "devDependencies": {}
+}
