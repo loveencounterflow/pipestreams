@@ -79,6 +79,17 @@ OS                        = require 'os'
   #.........................................................................................................
   return R
 
+#===========================================================================================================
+# ISA METHODS
+#-----------------------------------------------------------------------------------------------------------
+### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
+### TAINT copied from PipeDreams ###
+@_isa_nodestream            = ( x ) -> x instanceof ( require 'stream' ).Stream
+@_isa_readable_nodestream   = ( x ) -> ( @_isa_nodestream x ) and x.readable
+@_isa_writable_nodestream   = ( x ) -> ( @_isa_nodestream x ) and x.writable
+@_isa_readonly_nodestream   = ( x ) -> ( @_isa_nodestream x ) and x.readable and not x.writable
+@_isa_writeonly_nodestream  = ( x ) -> ( @_isa_nodestream x ) and x.writable and not x.readable
+@_isa_duplex_nodestream     = ( x ) -> ( @_isa_nodestream x ) and x.readable and     x.writable
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -87,7 +98,10 @@ OS                        = require 'os'
   R             = {}
   R.transforms  = []
   R.pipe = ( transform ) ->
-    @transforms.push transform
+    if      CND.isa_function    transform then type = 'function'
+    else if   @_isa_nodestream  transform then type = 'nodestream'
+    else throw new Error "expected a NodeJS stream or a function, got a #{CND.type_of transform}"
+    @transforms.push [ type, transform, ]
     return @
   #.........................................................................................................
   input = FS.createReadStream path, { highWaterMark: 120, encoding: 'utf-8', }
@@ -96,8 +110,11 @@ OS                        = require 'os'
     # debug '22010', rpr chunk
     # debug '22010', rpr R.transforms
     this_value = chunk
-    for transform, transform_idx in R.transforms
-      transform this_value, ( next_value ) => this_value = next_value
+    for [ type, transform, ], transform_idx in R.transforms
+      switch type
+        when 'function'   then transform this_value, ( next_value ) => this_value = next_value
+        when 'nodestream' then transform.write this_value
+        else throw new Error "expected a NodeJS stream or a function, got a #{CND.type_of transform}"
   #.........................................................................................................
   input.on 'end', -> urge 'input ended'
   input.on 'close', -> urge 'input closed'
@@ -110,8 +127,13 @@ OS                        = require 'os'
   return method
 
 #-----------------------------------------------------------------------------------------------------------
+@$pass = ->
+  ### TAINT rewrite as observer transform (without the `send` argument) ###
+  return @$ ( data, send ) -> send data
+
+#-----------------------------------------------------------------------------------------------------------
 @$show = ->
-  ### TAINT rewrite as observer transform (with the `send` argument) ###
+  ### TAINT rewrite as observer transform (without the `send` argument) ###
   my_info = CND.get_logger 'info', '*'
   return @$ ( data, send ) ->
     send data
@@ -131,6 +153,13 @@ OS                        = require 'os'
     assembler chunk
     return null
 
+#-----------------------------------------------------------------------------------------------------------
+@$as_line = ( stringify ) ->
+  stringify ?= JSON.stringify
+  return @$ ( data, send ) =>
+    send ( if ( CND.isa_text data ) then data else stringify data ) + '\n'
+    return null
+
 # debug '33631', transform is transform.pipe()
 
 # transform
@@ -143,39 +172,9 @@ OS                        = require 'os'
 
 
 
-#-----------------------------------------------------------------------------------------------------------
-@[ "test line assembler" ] = ( T, done ) ->
-  text = """
-  "　2. 纯；专：专～。～心～意。"
-  !"　3. 全；满：～生。～地水。"
-  "　4. 相同：～样。颜色不～。"
-  "　5. 另外!的：蟋蟀～名促织。!"
-  "　6. 表示动作短暂，或是一次，或具试探性：算～算。试～试。"!
-  "　7. 乃；竞：～至于此。"
-  """
-  # text = "abc\ndefg\nhijk"
-  chunks    = text.split '!'
-  text      = text.replace /!/g, ''
-  collector = []
-  assembler = @new_line_assembler { extra: true, splitter: '\n', }, ( error, line ) ->
-    throw error if error?
-    if line?
-      collector.push line
-      info rpr line
-    else
-      # urge rpr text
-      # help rpr collector.join '\n'
-      # debug collector
-      debug CND.truth CND.equals text, collector.join '\n'
-  for chunk in chunks
-    assembler chunk
-  assembler null
 
 
-#-----------------------------------------------------------------------------------------------------------
-input   = @new_stream PATH.resolve __dirname, '../test-data/guoxuedashi-excerpts-short.txt'
-# output  = FS.createWriteStream '/tmp/output.txt'
-input
-  .pipe @$split()
-  .pipe @$show()
-  # .pipe output
+
+
+
+
