@@ -94,12 +94,14 @@ OS                        = require 'os'
 
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( path ) ->
+  self = @
   #.........................................................................................................
   R             = {}
   R.transforms  = []
+  #.........................................................................................................
   R.pipe = ( transform ) ->
-    if      CND.isa_function    transform then type = 'function'
-    else if   @_isa_nodestream  transform then type = 'nodestream'
+    if        CND.isa_function    transform then type = 'function'
+    else if self._isa_nodestream  transform then type = 'nodestream'
     else throw new Error "expected a NodeJS stream or a function, got a #{CND.type_of transform}"
     @transforms.push [ type, transform, ]
     return @
