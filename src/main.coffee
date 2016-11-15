@@ -173,11 +173,9 @@ OS                        = require 'os'
 
 
 #-----------------------------------------------------------------------------------------------------------
-# input = @new_stream '/home/flow/io/basic-stream-benchmarks/test-data/Unicode-NamesList.txt'
-# input = @new_stream '/home/flow/io/basic-stream-benchmarks/test-data/Unicode-NamesList-short.txt'
-input   = @new_stream '/home/flow/io/basic-stream-benchmarks/test-data/guoxuedashi-excerpts-short.txt'
-output  = FS.createWriteStream '/tmp/output.txt'
+input   = @new_stream PATH.resolve __dirname, '../test-data/guoxuedashi-excerpts-short.txt'
+# output  = FS.createWriteStream '/tmp/output.txt'
 input
   .pipe @$split()
   .pipe @$show()
-  .pipe output
+  # .pipe output
