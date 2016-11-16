@@ -19,7 +19,7 @@ FS                        = require 'fs'
 OS                        = require 'os'
 
 #-----------------------------------------------------------------------------------------------------------
-@new_line_assembler = ( settings, handler ) ->
+@_new_line_assembler = ( settings, handler ) ->
   switch arity = arguments.length
     when 1 then [ settings, handler, ] = [ null, settings, ]
     when 2 then null
@@ -106,6 +106,9 @@ OS                        = require 'os'
     @transforms.push [ type, transform, ]
     return @
   #.........................................................................................................
+  R.on = ( P... ) ->
+    input.on P...
+  #.........................................................................................................
   input = FS.createReadStream path, { highWaterMark: 120, encoding: 'utf-8', }
   #.........................................................................................................
   input.on 'data', ( chunk ) ->
@@ -146,7 +149,7 @@ OS                        = require 'os'
 @$split = ->
   main_send = null
   #.........................................................................................................
-  assembler = @new_line_assembler { extra: false, splitter: '\n', }, ( error, line ) ->
+  assembler = @_new_line_assembler { extra: false, splitter: '\n', }, ( error, line ) ->
     return main_send.error error if error?
     main_send line
   #.........................................................................................................

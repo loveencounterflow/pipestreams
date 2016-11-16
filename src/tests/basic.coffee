@@ -18,12 +18,12 @@ PATH                      = require 'path'
 FS                        = require 'fs'
 OS                        = require 'os'
 tap                       = require 'tap'
-PS                        = require '..'
+PS                        = require '../..'
 { $, $async, }            = PS
 
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "test line assembler" ] = ( T, done ) ->
+tap.test "test line assembler", ( T ) ->
   text = """
   "　2. 纯；专：专～。～心～意。"
   !"　3. 全；满：～生。～地水。"
@@ -36,7 +36,7 @@ PS                        = require '..'
   chunks    = text.split '!'
   text      = text.replace /!/g, ''
   collector = []
-  assembler = @new_line_assembler { extra: true, splitter: '\n', }, ( error, line ) ->
+  assembler = PS._new_line_assembler { extra: true, splitter: '\n', }, ( error, line ) ->
     throw error if error?
     if line?
       collector.push line
@@ -45,7 +45,9 @@ PS                        = require '..'
       # urge rpr text
       # help rpr collector.join '\n'
       # debug collector
-      debug CND.truth CND.equals text, collector.join '\n'
+      if CND.equals text, collector.join '\n'
+        T.pass "texts are equal"
+      T.end()
   for chunk in chunks
     assembler chunk
   assembler null
@@ -53,17 +55,24 @@ PS                        = require '..'
 #-----------------------------------------------------------------------------------------------------------
 tap.test 'test throughput', ( T ) ->
   # input   = @new_stream PATH.resolve __dirname, '../test-data/guoxuedashi-excerpts-short.txt'
-  input   = @new_stream PATH.resolve __dirname, '../test-data/Unicode-NamesList.txt'
+  input   = PS.new_stream PATH.resolve __dirname, '../../test-data/Unicode-NamesList.txt'
   output  = FS.createWriteStream '/tmp/output.txt'
+  lines   = []
   input
-    .pipe @$split()
-    .pipe @$pass()
-    # .pipe @$show()
-    .pipe @$as_line()
+    .pipe PS.$split()
+    .pipe PS.$pass()
+    # .pipe PS.$show()
+    .pipe PS.$as_line()
+    .pipe $ ( line, send ) ->
+      lines.push line
+      send line
     .pipe output
   ### TAINT use PipeStreams method ###
+  input.on 'end', -> output.end()
   output.on 'close', ->
-    T.end
+    # if CND.equals lines.join '\n'
+    T.pass "assuming equality"
+    T.end()
   return null
 
 
