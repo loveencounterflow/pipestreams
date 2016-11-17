@@ -91,6 +91,10 @@ OS                        = require 'os'
 @_isa_writeonly_nodestream  = ( x ) -> ( @_isa_nodestream x ) and x.writable and not x.readable
 @_isa_duplex_nodestream     = ( x ) -> ( @_isa_nodestream x ) and x.readable and     x.writable
 
+#-----------------------------------------------------------------------------------------------------------
+@_type_of = ( x ) ->
+  return 'nodestream' if @_isa_nodestream x
+  return CND.type_of x
 
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( path ) ->
@@ -99,11 +103,24 @@ OS                        = require 'os'
   R             = {}
   R.transforms  = []
   #.........................................................................................................
-  R.pipe = ( transform ) ->
-    if        CND.isa_function    transform then type = 'function'
-    else if self._isa_nodestream  transform then type = 'nodestream'
-    else throw new Error "expected a NodeJS stream or a function, got a #{CND.type_of transform}"
-    @transforms.push [ type, transform, ]
+  ### TAINT strictly, no need to inline these methods; could be same for all instances, except @ binding ###
+  R.pipe = ( transform_info ) ->
+    type      = null
+    mode      = null
+    arity     = null
+    transform = null
+    switch type = self._type_of transform_info
+      when 'function'
+        throw new Error "### currently not supported ###"
+      when 'PIPESTREAMS/transform-info'
+        type                      = 'function'
+        { method, arity, mode, }  = transform_info
+        transform                 = method
+      when 'nodestream'
+        transform                 = transform_info
+      else
+        throw new Error "expected a NodeJS stream, a PIPESTREAMS/transform-info or a function, got a #{type}"
+    @transforms.push { type, mode, arity, transform, }
     return @
   #.........................................................................................................
   R.on = ( P... ) ->
@@ -114,22 +131,57 @@ OS                        = require 'os'
   input.on 'data', ( chunk ) ->
     # debug '22010', rpr chunk
     # debug '22010', rpr R.transforms
-    this_value = chunk
-    for [ type, transform, ], transform_idx in R.transforms
+    this_collector  = [ chunk, ]
+    next_collector  = []
+    for { type, mode, arity, transform, }, transform_idx in R.transforms
+      #.....................................................................................................
       switch type
-        when 'function'   then transform this_value, ( next_value ) => this_value = next_value
-        when 'nodestream' then transform.write this_value
-        else throw new Error "expected a NodeJS stream or a function, got a #{CND.type_of transform}"
+        #...................................................................................................
+        when 'function'
+          ### TAINT only works with synchronous transforms ###
+          handler = ( next_value ) =>
+            next_collector.push next_value
+          while this_collector.length > 0
+            this_value = this_collector.shift()
+            transform this_value, handler
+          this_collector  = next_collector
+          next_collector  = []
+        #...................................................................................................
+        when 'nodestream'
+          ### TAINT honor backpressure ###
+          while this_collector.length > 0
+            this_value = this_collector.shift()
+            transform.write this_value
+        #...................................................................................................
+        else
+          throw new Error "expected a NodeJS stream or a function, got a #{CND.type_of transform}"
   #.........................................................................................................
-  input.on 'end', -> urge 'input ended'
-  input.on 'close', -> urge 'input closed'
+  # input.on 'end', -> urge 'input ended'
+  # input.on 'close', -> urge 'input closed'
   #.........................................................................................................
   return R
 
 #-----------------------------------------------------------------------------------------------------------
 @$ = @remit = ( method ) ->
-  throw new Error "### MEH ###" unless method.length is 2
-  return method
+  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "### MEH ###" unless ( arity = method.length ) is 2
+  R =
+    '~isa':     'PIPESTREAMS/transform-info'
+    mode:       'sync'
+    method:     method
+    arity:      arity
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@$async = @remit_async = ( method ) ->
+  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "### MEH ###" unless ( arity = method.length ) is 2
+  R =
+    '~isa':     'PIPESTREAMS/transform-info'
+    mode:       'async'
+    method:     method
+    arity:      arity
+  return R
 
 #-----------------------------------------------------------------------------------------------------------
 @$pass = ->
