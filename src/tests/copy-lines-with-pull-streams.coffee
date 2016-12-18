@@ -22,6 +22,7 @@ FS                        = require 'fs'
 $split                    = require 'pull-split'
 $stringify                = require 'pull-stringify'
 $utf8                     = require 'pull-utf8-decoder'
+new_file_source           = require 'pull-file'
 pull                      = require 'pull-stream'
 ### NOTE these two are different: ###
 # $pass_through             = require 'pull-stream/throughs/through'
@@ -30,36 +31,25 @@ async_map                 = require 'pull-stream/throughs/async-map'
 STPS                      = require 'stream-to-pull-stream'
 #...........................................................................................................
 O                         = {}
-O.pass_through_count      = 100
+O.pass_through_count      = 1000
 O.pass_through_async      = no
+# O.implementation          = 'pull-stream'
+# O.implementation          = 'pipestreams-map'
+O.implementation          = 'pipestreams-remit'
 #...........................................................................................................
 TAP                       = require 'tap'
+#...........................................................................................................
+PS                        = require '../..'
+{ $, $async, }            = PS
 
-
-#-----------------------------------------------------------------------------------------------------------
-$ = ( method ) ->
-  switch arity = method.length
-    when 2 then null
-    else throw new Error "method arity #{arity} not implemented"
-  #.........................................................................................................
-  # queue = null
-  #.........................................................................................................
-  on_data = ( data ) ->
-    ### TAINT constructs a new single-use function for each data item ###
-    send = ( data ) => @queue data
-    method data, send
-  #.........................................................................................................
-  R = through on_data
-    # @queue null
-  #.........................................................................................................
-  return R
 
 #-----------------------------------------------------------------------------------------------------------
 TAP.test "performance regression", ( T ) ->
 
   #---------------------------------------------------------------------------------------------------------
-  input_stream              = FS.createReadStream   PATH.resolve __dirname, '../../test-data/ids.txt'
-  output_stream             = FS.createWriteStream  PATH.resolve __dirname, '../../test-data/ids-copy.txt'
+  # input                     = PS.new_file_source  PATH.resolve __dirname, '../../test-data/ids.txt'
+  input                     = PS.new_file_source  PATH.resolve __dirname, '../../test-data/Unicode-NamesList-tiny.txt'
+  output_stream             = PS.new_file_sink    PATH.resolve __dirname, '../../test-data/ids-copy.txt'
 
   #---------------------------------------------------------------------------------------------------------
   pipeline                  = []
@@ -69,10 +59,11 @@ TAP.test "performance regression", ( T ) ->
   item_count                = 0
 
   #---------------------------------------------------------------------------------------------------------
-  input_stream.on 'open', ->
+  PS.map_start ->
+    help 44402, "start"
     t0 = Date.now()
-    # help "input_stream: open"
 
+  ###
   #---------------------------------------------------------------------------------------------------------
   output_stream.on 'close', ->
     t1              = Date.now()
@@ -86,17 +77,61 @@ TAP.test "performance regression", ( T ) ->
     help "#{item_count_txt} items; dts: #{dts_txt}, ips: #{ips_txt}"
     T.pass "looks good"
     T.end()
+  ###
+
+  ```
+  f = function through (op, onEnd) {
+    var a = false
+
+    function once (abort) {
+      if(a || !onEnd) return
+      a = true
+      onEnd(abort === true ? null : abort)
+    }
+
+    return function (read) {
+      return function (end, cb) {
+        if(end) once(end)
+        return read(end, function (end, data) {
+          if(!end) op && op(data)
+          else once(end)
+          cb(end, data)
+        })
+      }
+    }
+  }
+  ```
 
   #---------------------------------------------------------------------------------------------------------
-  $count              = -> pull.map      ( line    ) -> item_count += +1; return line
-  $trim               = -> pull.map      ( line    ) -> line.trim()
-  $filter_empty       = -> pull.filter   ( line    ) -> line.length > 0
-  $filter_comments    = -> pull.filter   ( line    ) -> not line.startsWith '#'
-  $split_fields       = -> pull.map      ( line    ) -> line.split '\t'
-  $select_fields      = -> pull.map      ( fields  ) -> [ _, glyph, formula, ] = fields; return [ glyph, formula, ]
-  $filter_incomplete  = -> pull.filter   ( fields  ) -> [ a, b, ] = fields; return a? or b?
-  $as_text            = -> pull.map      ( fields  ) -> JSON.stringify fields
-  $as_line            = -> pull.map      ( line    ) -> line + '\n'
+  switch O.implementation
+    #.......................................................................................................
+    when 'pull-stream'
+      $as_line            = -> pull.map ( line    ) -> line + '\n'
+      $as_text            = -> pull.map ( fields  ) -> JSON.stringify fields
+      $count              = -> pull.map ( line    ) -> item_count += +1; return line
+      $select_fields      = -> pull.map ( fields  ) -> [ _, glyph, formula, ] = fields; return [ glyph, formula, ]
+      $split_fields       = -> pull.map ( line    ) -> line.split '\t'
+      $trim               = -> pull.map ( line    ) -> line.trim()
+    #.......................................................................................................
+    when 'pipestreams-remit'
+      $as_line            = -> $ ( line,   send ) -> send line + '\n'
+      $as_text            = -> $ ( fields, send ) -> send JSON.stringify fields
+      $count              = -> $ ( line,   send ) -> item_count += +1; send line
+      $select_fields      = -> $ ( fields, send ) -> [ _, glyph, formula, ] = fields; send [ glyph, formula, ]
+      $split_fields       = -> $ ( line,   send ) -> send line.split '\t'
+      $trim               = -> $ ( line,   send ) -> send line.trim()
+    #.......................................................................................................
+    when 'pipestreams-map'
+      $as_line            = -> PS.map ( line    ) -> line + '\n'
+      $as_text            = -> PS.map ( fields  ) -> JSON.stringify fields
+      $count              = -> PS.map ( line    ) -> item_count += +1; return line
+      $select_fields      = -> PS.map ( fields  ) -> [ _, glyph, formula, ] = fields; return [ glyph, formula, ]
+      $split_fields       = -> PS.map ( line    ) -> line.split '\t'
+      $trim               = -> PS.map ( line    ) -> line.trim()
+  #.........................................................................................................
+  $filter_empty       = -> PS.filter ( line   ) -> line.length > 0
+  $filter_comments    = -> PS.filter ( line   ) -> not line.startsWith '#'
+  $filter_incomplete  = -> PS.filter ( fields ) -> [ a, b, ] = fields; return a? or b?
 
   #---------------------------------------------------------------------------------------------------------
   if O.pass_through_async
@@ -105,10 +140,17 @@ TAP.test "performance regression", ( T ) ->
         setImmediate ->
           handler null, data
   else
-    $pass = -> pull.map ( line ) -> line
+  switch O.implementation
+    when 'pull-stream'
+      $pass = -> pull.map ( line ) -> line
+    when 'pipestreams-remit'
+      $pass = -> $ ( line, send ) -> send line
+    when 'pipestreams-map'
+      $pass = -> PS.map ( line ) -> line
 
-  #---------------------------------------------------------------------------------------------------------
-  $input = -> STPS.source input_stream
+
+  # #---------------------------------------------------------------------------------------------------------
+  # $input = -> STPS.source input
 
   #---------------------------------------------------------------------------------------------------------
   $output = ->
@@ -118,7 +160,7 @@ TAP.test "performance regression", ( T ) ->
       dts = ( t1 - t0 ) / 1000
 
   #---------------------------------------------------------------------------------------------------------
-  push $input()
+  push input
   push $utf8()
   push $split()
   push $count()
@@ -129,7 +171,7 @@ TAP.test "performance regression", ( T ) ->
   push $split_fields()
   push $select_fields()
   push $filter_incomplete()
-  # push $ ( data, send ) => debug '60000', data; send data
+  # push $ ( data, send ) => send data
   push $as_text()
   push $as_line()
   push $output()
