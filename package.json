@@ -38,6 +38,6 @@
     "stream-to-pull-stream": "^1.7.2"
   },
   "devDependencies": {
-    "tap": "^8.0.0"
+    "tap": "^8.0.1"
   }
 }

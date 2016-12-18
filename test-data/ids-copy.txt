@@ -1,0 +1,10 @@
+["The Unicode Standard 9.0.0",null]
+["The Unicode Standard 9.0.0",null]
+["The Unicode Standard 9.0.0",null]
+["U90M160615.lst",null]
+["U90M160615.lst",null]
+["","© 2016 Unicode®, Inc."]
+["","© 2016 Unicode®, Inc."]
+["0000","C0 Controls and Basic Latin (Basic Latin)"]
+["0000","C0 Controls and Basic Latin (Basic Latin)"]
+undefined

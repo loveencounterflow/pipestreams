@@ -15,7 +15,7 @@ urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 # #...........................................................................................................
 # PATH                      = require 'path'
-# FS                        = require 'fs'
+FS                        = require 'fs'
 # OS                        = require 'os'
 #...........................................................................................................
 new_file_source           = require 'pull-file'
@@ -27,17 +27,50 @@ $utf8                     = require 'pull-utf8-decoder'
 pull                      = require 'pull-stream'
 map                       = pull.map.bind pull
 ### NOTE these two are different: ###
-# $pass_through             = require 'pull-stream/throughs/through'
+$pass_through             = require 'pull-stream/throughs/through'
 through                   = require 'pull-through'
 async_map                 = require 'pull-stream/throughs/async-map'
 STPS                      = require 'stream-to-pull-stream'
+#...........................................................................................................
+return_id                 = ( x ) -> x
 
 
 #-----------------------------------------------------------------------------------------------------------
-@new_file_source = ( P... ) -> new_file_source P...
+@new_file_source  = ( P... ) -> @_new_file_source_using_stpd  P...
+@new_file_sink    = ( P... ) -> @_new_file_sink_using_stps    P...
 
 #-----------------------------------------------------------------------------------------------------------
-@new_file_sink = ( P... ) -> new_file_sink P...
+@_new_file_source_using_pullfile  = ( P... ) -> new_file_source P...
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_file_source_using_stpd  = ( P... ) ->
+  stream = FS.createReadStream P...
+  # t0 = null
+  # stream.on 'open',   -> t0 = Date.now()
+  # stream.on 'finish', -> debug '33321-source-finish', ( Date.now() - t0 ) / 1000
+  # stream.on 'end',    -> debug '33321-source-end',    ( Date.now() - t0 ) / 1000
+  # stream.on 'close',  -> debug '33321-source-close',  ( Date.now() - t0 ) / 1000
+  return STPS.source stream
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_file_sink_using_stps  = ( P... ) ->
+  stream = FS.createWriteStream P...
+  # t0 = null
+  # stream.on 'open',   -> t0 = Date.now()
+  # stream.on 'finish', -> debug '33321-sink-finish', ( Date.now() - t0 ) / 1000
+  # stream.on 'end',    -> debug '33321-sink-end',    ( Date.now() - t0 ) / 1000
+  # stream.on 'close',  -> debug '33321-sink-close',  ( Date.now() - t0 ) / 1000
+  return STPS.sink stream
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_file_sink_using_pwf = ( path, options = null ) ->
+  throw new Error "not implemented"
+  ### TAINT errors with "DeprecationWarning: Calling an asynchronous function without callback is
+  deprecated." (???) ###
+  options ?= {}
+  return new_file_sink path, options, ( error ) ->
+    throw error if error?
+    return null
 
 #-----------------------------------------------------------------------------------------------------------
 @map_start = ( method ) ->
@@ -51,8 +84,15 @@ STPS                      = require 'stream-to-pull-stream'
     return data
 
 #-----------------------------------------------------------------------------------------------------------
+@map_stop = ( method ) ->
+  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 0
+  return $pass_through return_id, ( abort ) ->
+    method()
+    return abort
+
+#-----------------------------------------------------------------------------------------------------------
 @map_first = ( method ) ->
-  send_data = null
   throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 1
   is_first = yes
@@ -61,6 +101,12 @@ STPS                      = require 'stream-to-pull-stream'
       is_first = no
       method data
     return data
+
+#-----------------------------------------------------------------------------------------------------------
+@map_last = ( method ) ->
+  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 1
+  throw new Error 'meh'
 
 #-----------------------------------------------------------------------------------------------------------
 @filter = ( method ) ->
