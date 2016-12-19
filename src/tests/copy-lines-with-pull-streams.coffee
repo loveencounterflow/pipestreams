@@ -48,8 +48,9 @@ PS                        = require '../..'
 TAP.test "performance regression", ( T ) ->
 
   #---------------------------------------------------------------------------------------------------------
-  # input_path  = PATH.resolve __dirname, '../../test-data/ids.txt'
+  # input_path  = PATH.resolve __dirname, '../../test-data/ids-short.txt'
   input_path  = PATH.resolve __dirname, '../../test-data/Unicode-NamesList-tiny.txt'
+  # input_path  = PATH.resolve __dirname, '../../test-data/ids.txt'
   output_path = PATH.resolve __dirname, '../../test-data/ids-copy.txt'
 
   #---------------------------------------------------------------------------------------------------------
@@ -187,11 +188,23 @@ TAP.test "performance regression", ( T ) ->
       $split_fields       = -> PS.map ( line    ) -> line.split '\t'
       $trim               = -> PS.map ( line    ) -> line.trim()
       $pass               = -> PS.map ( line    ) -> line
+      $my_utf8            = -> PS.map ( buffer  ) -> debug buffer; buffer.toString 'utf-8'
+      $show               = -> PS.map ( data    ) -> info rpr data; return data
+      $sink_example = ->
+        return ( read ) ->
+          next = ( error, data ) ->
+            return warn error if error
+            info '77775', rpr data
+            # recursively call read again
+            read null, next
+            return null
+          read null, next
+          return null
+
   #.........................................................................................................
   $filter_empty       = -> PS.filter ( line   ) -> line.length > 0
   $filter_comments    = -> PS.filter ( line   ) -> not line.startsWith '#'
   $filter_incomplete  = -> PS.filter ( fields ) -> [ a, b, ] = fields; return a? or b?
-
 
   #---------------------------------------------------------------------------------------------------------
   push input
@@ -206,15 +219,16 @@ TAP.test "performance regression", ( T ) ->
   push $split_fields()
   push $select_fields()
   push $filter_incomplete()
-  push XXX_through2 ( data, send ) ->
-    urge data
-    send data
-    send data
+  # push XXX_through2 ( data, send ) ->
+  #   urge data
+  #   send data
+  #   send data
   push $as_text()
   push $as_line()
   push $pass() for idx in [ 1 .. O.pass_through_count ] by +1
   # push ( pull.map ( line ) -> line ) for idx in [ 1 .. O.pass_through_count ] by +1
   push $on_stop()
-  push output
+  push $sink_example()
+  # push output
   pull pipeline...
 
