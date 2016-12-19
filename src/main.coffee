@@ -1,4 +1,6 @@
 
+"use strict"
+
 
 ############################################################################################################
 CND                       = require 'cnd'
@@ -44,6 +46,9 @@ return_id                 = ( x ) -> x
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_file_source_using_stpd  = ( P... ) ->
+  [ path, ] = P
+  # stream = FS.createReadStream path, { highWaterMark: 3, }
+  # stream = FS.createReadStream path, { encoding: 'utf-8', }
   stream = FS.createReadStream P...
   # t0 = null
   # stream.on 'open',   -> t0 = Date.now()

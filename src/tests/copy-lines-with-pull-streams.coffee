@@ -1,4 +1,21 @@
 
+'use strict'
+
+
+###
+Testing Parameters
+
+* number of no-op pass-through transforms
+* highWaterMark for input stream
+* whether input stream emits buffers or strings (if it emits strings, whether `$utf8` transform should be kept)
+* implementation model for transforms
+* implementation model for pass-throughs
+
+Easy to show that `$split` doesn't work correctly on buffers (set highWaterMark to, say, 3 and have
+input stream emit buffers).
+
+###
+
 
 ############################################################################################################
 CND                       = require 'cnd'
@@ -45,23 +62,32 @@ PS                        = require '../..'
 
 
 #-----------------------------------------------------------------------------------------------------------
+TAP.test "tail-call optimization works", ( T ) ->
+  'use strict'
+  f = ( count = 0 ) ->
+    whisper format_integer count if count % 1e5 is 0
+    if count < 1e6
+      f count + 1
+  f()
+  T.pass "looks good"
+  T.end()
+
+#-----------------------------------------------------------------------------------------------------------
 TAP.test "performance regression", ( T ) ->
 
   #---------------------------------------------------------------------------------------------------------
+  input_settings  = { encoding: 'utf-8', }
+  input_path      = PATH.resolve __dirname, '../../test-data/ids.txt'
   # input_path  = PATH.resolve __dirname, '../../test-data/ids-short.txt'
-  input_path  = PATH.resolve __dirname, '../../test-data/Unicode-NamesList-tiny.txt'
-  # input_path  = PATH.resolve __dirname, '../../test-data/ids.txt'
-  output_path = PATH.resolve __dirname, '../../test-data/ids-copy.txt'
+  # input_path  = PATH.resolve __dirname, '../../test-data/Unicode-NamesList-tiny.txt'
+  output_path     = PATH.resolve __dirname, '../../test-data/ids-copy.txt'
 
   #---------------------------------------------------------------------------------------------------------
-  input                     = PS.new_file_source            input_path
-  # output                    = PS.new_file_sink output_path
+  input                     = PS.new_file_source input_path, input_settings
+  # output                    = PS.new_file_sink              output_path
   # output                    = PS._new_file_sink_using_stps  output_path
   # output                    = PS._new_file_sink_using_pwf   output_path
-  output                    = PS.new_file_sink              output_path
-
-  # input   = STPS.source FS.createReadStream   input_path
-  # output  = STPS.sink   FS.createWriteStream  output_path
+  output                    = PS.new_file_sink output_path
 
   #---------------------------------------------------------------------------------------------------------
   pipeline                  = []
@@ -192,14 +218,16 @@ TAP.test "performance regression", ( T ) ->
       $show               = -> PS.map ( data    ) -> info rpr data; return data
       $sink_example = ->
         return ( read ) ->
+          'use strict'
           next = ( error, data ) ->
+            'use strict'
             return warn error if error
-            info '77775', rpr data
-            # recursively call read again
-            read null, next
-            return null
-          read null, next
-          return null
+            # info '77775', rpr data
+            ### recursively call read again ###
+            return read null, next
+            # return null
+          return read null, next
+          # return null
 
   #.........................................................................................................
   $filter_empty       = -> PS.filter ( line   ) -> line.length > 0
@@ -209,8 +237,9 @@ TAP.test "performance regression", ( T ) ->
   #---------------------------------------------------------------------------------------------------------
   push input
   push $on_start()
-  push $utf8()
+  # push $utf8()
   push $split()
+  # push $show()
   push $count()
   push $trim()
   push $filter_empty()
