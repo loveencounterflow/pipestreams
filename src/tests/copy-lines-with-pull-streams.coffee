@@ -45,32 +45,134 @@ pull                      = require 'pull-stream'
 # $pass_through             = require 'pull-stream/throughs/through'
 through                   = require 'pull-through'
 async_map                 = require 'pull-stream/throughs/async-map'
+$drain                    = require 'pull-stream/sinks/drain'
 STPS                      = require 'stream-to-pull-stream'
 #...........................................................................................................
-O                         = {}
-O.pass_through_count      = 0
-# O.pass_through_count      = 1
-# O.pass_through_count      = 100
-# O.implementation          = 'pull-stream'
-O.implementation          = 'pipestreams-map'
-# O.implementation          = 'pipestreams-remit'
+S                         = {}
+S.pass_through_count      = 0
+# S.pass_through_count      = 1
+# S.pass_through_count      = 100
+# S.implementation          = 'pull-stream'
+S.implementation          = 'pipestreams-map'
+# S.implementation          = 'pipestreams-remit'
 #...........................................................................................................
 TAP                       = require 'tap'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
+#...........................................................................................................
+### Avoid to try to require `v8-profiler` when running this module with `devtool`: ###
+S.running_in_devtools     = console.profile?
+V8PROFILER                = null
+unless S.running_in_devtools
+  try
+    V8PROFILER = require 'v8-profiler'
+  catch error
+    throw error unless error[ 'code' ] is 'MODULE_NOT_FOUND'
+    warn "unable to `require v8-profiler`"
 
+PRFLR           = {}
+PRFLR.timers    = {}
+PRFLR.sums      = {}
+PRFLR.dt_total  = null
+PRFLR.counts    = {}
+if global.performance? then PRFLR.now = global.performance.now.bind global.performance
+else                        PRFLR.now = require 'performance-now'
+PRFLR.start = ( title ) ->
+  ( @timers[ title ] ?= [] ).push -@now()
+  return null
+PRFLR.stop  = ( title ) ->
+  @timers[ title ].push @now() + @timers[ title ].pop()
+  return null
+PRFLR.wrap  = ( title, method ) ->
+  throw new Error "expected a text, got a #{type}"      unless ( type = CND.type_of title  ) is 'text'
+  throw new Error "expected a function, got a #{type}"  unless ( type = CND.type_of method ) is 'function'
+  parameters = ( "a#{idx}" for idx in [ 1 .. method.length ] by +1 ).join ', '
+  title_txt = JSON.stringify title
+  source = """
+    var R;
+    R = function ( #{parameters} ) {
+      PRFLR.start( #{title_txt} );
+      R = method.apply( null, arguments );
+      PRFLR.stop( #{title_txt} );
+      return R;
+      }
+    """
+  R = eval source
+  return R
+PRFLR._average = ->
+  ### only call after calibration, before actual usage ###
+  @aggregate()
+  @dt = @sums[ 'dt' ] / 10
+  delete @sums[ 'dt' ]
+  delete @counts[ 'dt' ]
+PRFLR.aggregate = ->
+  if @timers[ '*' ]?
+    @stop '*' if @timers[ '*' ] < 0
+    @dt_total = @timers[ '*' ]
+    delete @timers[ '*' ]
+    delete @counts[ '*' ]
+  for title, timers of @timers
+    dts               = @timers[ title ]
+    @counts[ title ]  = dts.length
+    @sums[ title ]    = ( @sums[ title ] ? 0 ) + dts.reduce ( ( a, b ) -> a + b ), 0
+    delete @timers[ title ]
+  return null
+PRFLR.report = ->
+  @aggregate()
+  lines   = []
+  dt_sum  = 0
+  for title, dt of @sums
+    count   = ' ' + @counts[ title ]
+    leader  = '...'
+    leader += '.' until title.length + leader.length + count.length > 50
+    dt_sum += dt
+    dt_txt  = format_float dt
+    dt_txt  = ' ' + dt_txt until dt_txt.length > 10
+    line    = [ title, leader, count, dt_txt, ].join ' '
+    lines.push [ dt, line, ]
+  lines.sort ( a, b ) ->
+    return +1 if a[ 0 ] > b[ 0 ]
+    return -1 if a[ 0 ] < b[ 0 ]
+    return  0
+  dt_reference = @dt_total ? dt_sum
+  whisper "epsilon: #{@dt}"
+  percentage_txt = ( ( dt_sum / dt_reference * 100 ).toFixed 0 ) + '%'
+  whisper "dt reference: #{format_float dt_reference / 1000}s (#{percentage_txt})"
+  for [ dt, line, ] in lines
+    percentage_txt = ( ( dt / dt_reference * 100 ).toFixed 0 ) + '%'
+    percentage_txt = ' ' + percentage_txt until percentage_txt.length > 3
+    info line, percentage_txt
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "tail-call optimization works", ( T ) ->
-  'use strict'
-  f = ( count = 0 ) ->
-    whisper format_integer count if count % 1e5 is 0
-    if count < 1e6
-      f count + 1
-  f()
-  T.pass "looks good"
-  T.end()
+### provide a minmum delta time: ###
+for _ in [ 1 .. 10 ]
+  PRFLR.start 'dt'
+  PRFLR.stop  'dt'
+PRFLR._average()
+
+#-----------------------------------------------------------------------------------------------------------
+start_profile = ( S ) ->
+  S.t0 = Date.now()
+  if running_in_devtools
+    console.profile S.job_name
+  else if V8PROFILER?
+    V8PROFILER.startProfiling S.job_name
+
+#-----------------------------------------------------------------------------------------------------------
+stop_profile = ( S, handler ) ->
+  if running_in_devtools
+    console.profileEnd S.job_name
+  else if V8PROFILER?
+    step ( resume ) ->
+      profile         = V8PROFILER.stopProfiling S.job_name
+      profile_data    = yield profile.export resume
+      S.profile_name  = "profile-#{S.job_name}.json"
+      S.profile_home  = PATH.resolve __dirname, '../results', S.fingerprint, 'profiles'
+      mkdirp.sync S.profile_home
+      S.profile_path  = PATH.resolve S.profile_home, S.profile_name
+      FS.writeFileSync S.profile_path, profile_data
+      handler()
 
 #-----------------------------------------------------------------------------------------------------------
 TAP.test "performance regression", ( T ) ->
@@ -78,8 +180,8 @@ TAP.test "performance regression", ( T ) ->
   #---------------------------------------------------------------------------------------------------------
   input_settings  = { encoding: 'utf-8', }
   input_path      = PATH.resolve __dirname, '../../test-data/ids.txt'
-  # input_path  = PATH.resolve __dirname, '../../test-data/ids-short.txt'
-  # input_path  = PATH.resolve __dirname, '../../test-data/Unicode-NamesList-tiny.txt'
+  # input_path      = PATH.resolve __dirname, '../../test-data/ids-short.txt'
+  # input_path      = PATH.resolve __dirname, '../../test-data/Unicode-NamesList-tiny.txt'
   output_path     = PATH.resolve __dirname, '../../test-data/ids-copy.txt'
 
   #---------------------------------------------------------------------------------------------------------
@@ -96,15 +198,21 @@ TAP.test "performance regression", ( T ) ->
   t1                        = null
   item_count                = 0
 
+
   #---------------------------------------------------------------------------------------------------------
   $on_start = ->
     return PS.map_start ->
       help 44402, "start"
+      PRFLR.start '*'
       t0 = Date.now()
+      console.profile 'copy-lines' if S.running_in_devtools
 
   #---------------------------------------------------------------------------------------------------------
   $on_stop = ->
     return PS.map_stop ->
+      PRFLR.stop '*'
+      PRFLR.report()
+      console.profileEnd 'copy-lines' if S.running_in_devtools
       t1              = Date.now()
       dts             = ( t1 - t0 ) / 1000
       dts_txt         = format_float dts
@@ -112,7 +220,7 @@ TAP.test "performance regression", ( T ) ->
       ips             = item_count / dts
       ips_txt         = format_float ips
       help PATH.basename __filename
-      help "pass-through count: #{O.pass_through_count}"
+      help "pass-through count: #{S.pass_through_count}"
       help "#{item_count_txt} items; dts: #{dts_txt}, ips: #{ips_txt}"
       T.pass "looks good"
       T.end()
@@ -183,7 +291,7 @@ TAP.test "performance regression", ( T ) ->
 
 
   #---------------------------------------------------------------------------------------------------------
-  switch O.implementation
+  switch S.implementation
     #.......................................................................................................
     when 'pull-stream'
       $as_line            = -> pull.map ( line    ) -> line + '\n'
@@ -206,39 +314,26 @@ TAP.test "performance regression", ( T ) ->
       $pass               = -> $ ( line,   send ) -> send line
     #.......................................................................................................
     when 'pipestreams-map'
-      $as_line            = -> PS.map ( line    ) -> line + '\n'
-      $as_text            = -> PS.map ( fields  ) -> JSON.stringify fields
-      $count              = -> PS.map ( line    ) -> item_count += +1; return line
-      # $count              = -> PS.map ( line    ) -> item_count += +1; whisper item_count if item_count % 1000 is 0; return line
-      $select_fields      = -> PS.map ( fields  ) -> [ _, glyph, formula, ] = fields; return [ glyph, formula, ]
-      $split_fields       = -> PS.map ( line    ) -> line.split '\t'
-      $trim               = -> PS.map ( line    ) -> line.trim()
-      $pass               = -> PS.map ( line    ) -> line
-      $my_utf8            = -> PS.map ( buffer  ) -> debug buffer; buffer.toString 'utf-8'
-      $show               = -> PS.map ( data    ) -> info rpr data; return data
-      $sink_example = ->
-        return ( read ) ->
-          'use strict'
-          next = ( error, data ) ->
-            'use strict'
-            return warn error if error
-            # info '77775', rpr data
-            ### recursively call read again ###
-            return read null, next
-            # return null
-          return read null, next
-          # return null
+      $as_line            = -> PS.map PRFLR.wrap '$as_line',        ( line    ) -> line + '\n'
+      $as_text            = -> PS.map PRFLR.wrap '$as_text',        ( fields  ) -> JSON.stringify fields
+      $count              = -> PS.map PRFLR.wrap '$count',          ( line    ) -> item_count += +1; return line
+      $select_fields      = -> PS.map PRFLR.wrap '$select_fields',  ( fields  ) -> [ _, glyph, formula, ] = fields; return [ glyph, formula, ]
+      $split_fields       = -> PS.map PRFLR.wrap '$split_fields',   ( line    ) -> line.split '\t'
+      $trim               = -> PS.map PRFLR.wrap '$trim',           ( line    ) -> line.trim()
+      $pass               = -> PS.map PRFLR.wrap '$pass',           ( line    ) -> line
+      $my_utf8            = -> PS.map PRFLR.wrap '$my_utf8',        ( buffer  ) -> debug buffer; buffer.toString 'utf-8'
+      $show               = -> PS.map PRFLR.wrap '$show',           ( data    ) -> info rpr data; return data
 
   #.........................................................................................................
-  $filter_empty       = -> PS.filter ( line   ) -> line.length > 0
-  $filter_comments    = -> PS.filter ( line   ) -> not line.startsWith '#'
-  $filter_incomplete  = -> PS.filter ( fields ) -> [ a, b, ] = fields; return a? or b?
+  $filter_empty       = -> PS.filter PRFLR.wrap '$filter_empty',      ( line   ) -> line.length > 0
+  $filter_comments    = -> PS.filter PRFLR.wrap '$filter_comments',   ( line   ) -> not line.startsWith '#'
+  $filter_incomplete  = -> PS.filter PRFLR.wrap '$filter_incomplete', ( fields ) -> [ a, b, ] = fields; return a? or b?
 
   #---------------------------------------------------------------------------------------------------------
   push input
   push $on_start()
   # push $utf8()
-  push $split()
+  push PRFLR.wrap '$split', $split()
   # push $show()
   push $count()
   push $trim()
@@ -254,10 +349,14 @@ TAP.test "performance regression", ( T ) ->
   #   send data
   push $as_text()
   push $as_line()
-  push $pass() for idx in [ 1 .. O.pass_through_count ] by +1
-  # push ( pull.map ( line ) -> line ) for idx in [ 1 .. O.pass_through_count ] by +1
+  # push ( pull.map ( line ) -> line ) for idx in [ 1 .. S.pass_through_count ] by +1
+  ###
+  ###
+  push $pass() for idx in [ 1 .. S.pass_through_count ] by +1
   push $on_stop()
-  push $sink_example()
+  # push $sink_example()
   # push output
+  # push $drain ( ( data ) -> urge data ), ( ( P... )-> help P )
+  push PRFLR.wrap '$drain', $drain()
   pull pipeline...
 
