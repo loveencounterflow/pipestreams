@@ -1,5 +1,5 @@
 
-"use strict"
+'use strict'
 
 
 ############################################################################################################
@@ -17,65 +17,54 @@ urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 # #...........................................................................................................
 # PATH                      = require 'path'
-FS                        = require 'fs'
 # OS                        = require 'os'
+FS                        = require 'fs'
+CP                        = require 'child_process'
 #...........................................................................................................
+### files, conversion from/to NodeJS push streams: ###
+### later
 new_file_source           = require 'pull-file'
 new_file_sink             = require 'pull-write-file'
+###
+STPS                      = require 'stream-to-pull-stream'
 #...........................................................................................................
-$split                    = require 'pull-split'
-$stringify                = require 'pull-stringify'
-$utf8                     = require 'pull-utf8-decoder'
+### stream creation: ###
+new_pushable              = require 'pull-pushable'
+#...........................................................................................................
+### transforms: ###
+$pull_split               = require 'pull-split'
+# $pull_stringify           = require 'pull-stringify'
+$pull_utf8_decoder        = require 'pull-utf8-decoder'
+$pass_through             = require 'pull-stream/throughs/through'
+$pull_drain               = require 'pull-stream/sinks/drain'
+#...........................................................................................................
 pull                      = require 'pull-stream'
 map                       = pull.map.bind pull
-### NOTE these two are different: ###
-$pass_through             = require 'pull-stream/throughs/through'
 through                   = require 'pull-through'
-async_map                 = require 'pull-stream/throughs/async-map'
-STPS                      = require 'stream-to-pull-stream'
+pull_async_map            = require 'pull-stream/throughs/async-map'
 #...........................................................................................................
 return_id                 = ( x ) -> x
 
-
 #-----------------------------------------------------------------------------------------------------------
-@new_file_source  = ( P... ) -> @_new_file_source_using_stpd  P...
-@new_file_sink    = ( P... ) -> @_new_file_sink_using_stps    P...
+@new_file_source              = ( P... ) -> @_new_file_source_using_stps      P...
+@new_file_sink                = ( P... ) -> @_new_file_sink_using_stps        P...
+@_new_file_source_using_stps  = ( P... ) -> STPS.source FS.createReadStream   P...
+@_new_file_sink_using_stps    = ( P... ) -> STPS.sink   FS.createWriteStream  P...
 
+
+### later (perhaps)
 #-----------------------------------------------------------------------------------------------------------
 @_new_file_source_using_pullfile  = ( P... ) -> new_file_source P...
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_file_source_using_stpd  = ( P... ) ->
-  [ path, ] = P
-  # stream = FS.createReadStream path, { highWaterMark: 3, }
-  # stream = FS.createReadStream path, { encoding: 'utf-8', }
-  stream = FS.createReadStream P...
-  # t0 = null
-  # stream.on 'open',   -> t0 = Date.now()
-  # stream.on 'finish', -> debug '33321-source-finish', ( Date.now() - t0 ) / 1000
-  # stream.on 'end',    -> debug '33321-source-end',    ( Date.now() - t0 ) / 1000
-  # stream.on 'close',  -> debug '33321-source-close',  ( Date.now() - t0 ) / 1000
-  return STPS.source stream
-
-#-----------------------------------------------------------------------------------------------------------
-@_new_file_sink_using_stps  = ( P... ) ->
-  stream = FS.createWriteStream P...
-  # t0 = null
-  # stream.on 'open',   -> t0 = Date.now()
-  # stream.on 'finish', -> debug '33321-sink-finish', ( Date.now() - t0 ) / 1000
-  # stream.on 'end',    -> debug '33321-sink-end',    ( Date.now() - t0 ) / 1000
-  # stream.on 'close',  -> debug '33321-sink-close',  ( Date.now() - t0 ) / 1000
-  return STPS.sink stream
-
-#-----------------------------------------------------------------------------------------------------------
 @_new_file_sink_using_pwf = ( path, options = null ) ->
   throw new Error "not implemented"
-  ### TAINT errors with "DeprecationWarning: Calling an asynchronous function without callback is
-  deprecated." (???) ###
+  # TAINT errors with "DeprecationWarning: Calling an asynchronous function without callback is deprecated." (???)
   options ?= {}
   return new_file_sink path, options, ( error ) ->
     throw error if error?
     return null
+###
 
 #-----------------------------------------------------------------------------------------------------------
 @map_start = ( method ) ->
@@ -151,72 +140,56 @@ return_id                 = ( x ) -> x
   return R
 
 #-----------------------------------------------------------------------------------------------------------
-@$async = @remit_async = ( method ) ->
-  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "### MEH ###" unless ( arity = method.length ) is 2
-
-
+@async_map = pull_async_map
 
 # #-----------------------------------------------------------------------------------------------------------
-# @_new_line_assembler = ( settings, handler ) ->
-#   switch arity = arguments.length
-#     when 1 then [ settings, handler, ] = [ null, settings, ]
-#     when 2 then null
-#     else throw new Error "expected 1 or 2 arguments, got #{arity}"
-#   #.........................................................................................................
-#   collector     = []
-#   extra         = settings?[ 'extra'    ] ? yes
-#   splitter      = settings?[ 'splitter' ] ? '\n'
-#   #.........................................................................................................
-#   unless type = CND.isa_text splitter
-#     throw new Error "expected a text for splitter, got a #{type}"
-#   ### TAINT should accept multiple characters, characters beyond 0xffff, regexes ###
-#   unless ( length = splitter.length ) is 1
-#     throw new Error "expected single character for splitter, got #{length}"
-#   #.........................................................................................................
-#   push = ( data ) ->
-#     collector.push data
-#     return null
-#   #.........................................................................................................
-#   send = ( data ) ->
-#     handler null, data
-#   #.........................................................................................................
-#   flush = ( chunk ) ->
-#     push chunk if chunk?
-#     if collector.length > 0
-#       send collector.join ''
-#       collector.length = 0
-#     return null
-#   #.........................................................................................................
-#   R = ( chunk ) ->
-#     unless chunk?
-#       flush()
-#       handler null, null if extra
-#       return null
-#     start_idx   = 0
-#     last_idx    = chunk.length - 1
-#     #.......................................................................................................
-#     if last_idx < 0
-#       handler null, ''
-#       return null
-#     #.......................................................................................................
-#     loop
-#       nl_idx = chunk.indexOf splitter, start_idx
-#       #.....................................................................................................
-#       if nl_idx < 0
-#         push if start_idx is 0 then chunk else chunk[ start_idx .. ]
-#         break
-#       #.....................................................................................................
-#       if nl_idx is 0
-#         flush()
-#       #.....................................................................................................
-#       else
-#         flush chunk[ start_idx ... nl_idx ]
-#       #.....................................................................................................
-#       break if nl_idx is last_idx
-#       start_idx = nl_idx + 1
-#   #.........................................................................................................
-#   return R
+# @$async = @remit_async = ( method ) ->
+#   throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+#   throw new Error "### MEH ###" unless ( arity = method.length ) is 2
+
+
+#===========================================================================================================
+#
+#-----------------------------------------------------------------------------------------------------------
+@$pass            = -> @map ( data ) -> data
+#...........................................................................................................
+@$as_line         = -> @map ( line ) -> line + '\n'
+@$trim            = -> @map ( line ) -> line.trim()
+@$split_fields    = -> @map ( line ) -> line.split '\t'
+#...........................................................................................................
+@$push_to_list    = ( collector ) -> @map ( data ) -> collector.push  data; return data
+@$add_to_set      = ( collector ) -> @map ( data ) -> collector.add   data; return data
+#...........................................................................................................
+@$count           = -> throw new Error "not implemented"
+#...........................................................................................................
+@$drain           = $pull_drain
+
+#-----------------------------------------------------------------------------------------------------------
+@$split = ( settings ) ->
+  throw new Error "MEH" if settings?
+  R         = []
+  matcher   = null
+  mapper    = null
+  reverse   = no
+  skip_last = yes
+  R.push $pull_utf8_decoder()
+  R.push $pull_split matcher, mapper, reverse, skip_last
+  return pull R
+
+#-----------------------------------------------------------------------------------------------------------
+@$show = ( settings ) ->
+  title     = settings?[ 'title'      ] ? '-->'
+  serialize = settings?[ 'serialize'  ] ? JSON.stringify
+  return @map ( data ) ->
+    info title, serialize data
+    return data
+
+#-----------------------------------------------------------------------------------------------------------
+@$as_text = ( settings ) ->
+  serialize = settings?[ 'serialize' ] ? JSON.stringify
+  return @map ( data ) ->
+    return serialize data
+
 
 # #===========================================================================================================
 # # ISA METHODS
