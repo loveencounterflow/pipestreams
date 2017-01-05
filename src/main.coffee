@@ -174,7 +174,7 @@ return_id                 = ( x ) -> x
   skip_last = yes
   R.push $pull_utf8_decoder()
   R.push $pull_split matcher, mapper, reverse, skip_last
-  return pull R
+  return pull R...
 
 #-----------------------------------------------------------------------------------------------------------
 @$show = ( settings ) ->
