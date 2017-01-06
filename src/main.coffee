@@ -191,6 +191,79 @@ return_id                 = ( x ) -> x
     return serialize data
 
 
+#===========================================================================================================
+#
+#-----------------------------------------------------------------------------------------------------------
+@spawn = ( command, settings, handler ) ->
+  ### `spawn` accepts a `command` (as a string) and a `handler`. It will execute the command in a child
+  process (using  `child_process command, { shell: yes, }`).
+
+  `spawn` expects the output to be UTF-8-encoded text, but this may become configurable in the future to
+  acommodate for non-textual outputs. Also, it may become possible to directly plug into the subprocess's
+  `stdout` and `stderr` streams; for now, the callback is the only way to handle command output. ###
+  #.........................................................................................................
+  ### TAINT must also consider exit code other than zero ###
+  ### TAINT consider case where there is output on both channels ###
+  #.........................................................................................................
+  switch arity = arguments.length
+    when 2
+      handler   = settings
+      settings  = null
+    when 3 then null
+    else throw new Error "expected 2 or 3 arguments, got #{arity}"
+  #.........................................................................................................
+  tap               = settings?[ 'tap' ] ? null
+  cp                = CP.spawn command, { shell: yes, }
+  #.........................................................................................................
+  stdout            = STPS.source cp.stdout
+  stdout_has_ended  = no
+  stdout_lines      = []
+  stdout_message    = null
+  stdout_pipeline   = []
+  #.........................................................................................................
+  stderr            = STPS.source cp.stderr
+  stderr_has_ended  = no
+  stderr_lines      = []
+  stderr_message    = null
+  stderr_pipeline   = []
+  #.........................................................................................................
+  stdout_pipeline.push stdout
+  stdout_pipeline.push @$split()
+  if tap?
+    stdout_pipeline.push @async_map ( line, handler ) ->
+      ### By deferring passing on each line both in this and the tapping stream we create an opportunity
+      for the tapping stream to run concurrently; without this, all lines would be buffered until the
+      main stream has finished: ###
+      setImmediate ->
+        ### TAINT use a 1-element list, callback, only conclude when list empty ###
+        tap.push line
+        handler null, line
+  stdout_pipeline.push @$show title: '***'
+  stdout_pipeline.push @$push_to_list stdout_lines
+  stdout_pipeline.push @$drain null, ->
+      stdout_has_ended = yes
+      if stderr_message?
+        return handler stderr_message
+      stdout_message = stdout_lines.join '\n' if stdout_lines.length > 0
+      handler null, stdout_message if stderr_has_ended
+      return null
+  pull stdout_pipeline...
+  #.........................................................................................................
+  stderr_pipeline.push stderr
+  stdout_pipeline.push @$split()
+  stderr_pipeline.push @$push_to_list stderr_lines
+  stderr_pipeline.push @$drain null, ->
+    stderr_has_ended = yes
+    if stderr_lines.length > 0
+      stderr_message = stderr_lines.join '\n'
+      return handler stderr_message if stdout_has_ended
+    handler null, stdout_message if stdout_has_ended
+    return null
+  pull stderr_pipeline...
+  #.........................................................................................................
+  return null
+
+
 # #===========================================================================================================
 # # ISA METHODS
 # #-----------------------------------------------------------------------------------------------------------
