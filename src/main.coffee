@@ -37,7 +37,7 @@ $pull_split               = require 'pull-split'
 $pull_utf8_decoder        = require 'pull-utf8-decoder'
 $pass_through             = require 'pull-stream/throughs/through'
 $pull_drain               = require 'pull-stream/sinks/drain'
-#...........................................................................................................
+$take                     = require 'pull-stream/throughs/take'
 pull                      = require 'pull-stream'
 map                       = pull.map.bind pull
 through                   = require 'pull-through'
@@ -45,11 +45,49 @@ pull_async_map            = require 'pull-stream/throughs/async-map'
 #...........................................................................................................
 return_id                 = ( x ) -> x
 
+### This is the original `pull-stream/throughs/map` implementation with the `try`/`catch` clause removed so
+all errors are thrown. This, until we find out how to properly handle errors the pull-streams way. Note
+that `_map_errors` behaves exactly like `pull-stream/throughs/filter` which tells me this shouldn't be
+too wrong. Also observe that while any library may require all errors to be given to a callback or
+somesuch, no library can really enforce that because not all client code may be wrapped, so I think
+we're stuck with throwing errors anyway. ###
+
+```
+var prop = require('pull-stream/util/prop')
+
+this._map_errors = function (mapper) {
+  if(!mapper) return return_id
+  mapper = prop(mapper)
+  return function (read) {
+    return function (abort, cb) {
+      read(abort, function (end, data) {
+        // try {
+        data = !end ? mapper(data) : null
+        // } catch (err) {
+        //   return read(err, function () {
+        //     return cb(err)
+        //   })
+        // }
+        cb(end, data)
+      })
+    }
+  }
+}
+```
+
+
+
 #-----------------------------------------------------------------------------------------------------------
 @new_file_source              = ( P... ) -> @_new_file_source_using_stps      P...
 @new_file_sink                = ( P... ) -> @_new_file_sink_using_stps        P...
 @_new_file_source_using_stps  = ( P... ) -> STPS.source FS.createReadStream   P...
-@_new_file_sink_using_stps    = ( P... ) -> STPS.sink   FS.createWriteStream  P...
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_file_sink_using_stps = ( P... ) ->
+  stream  = FS.createWriteStream P...
+  R       = STPS.sink stream
+  R.on    = ( P... ) -> stream.on P...
+  return R
 
 
 ### later (perhaps)
@@ -71,7 +109,7 @@ return_id                 = ( x ) -> x
   throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 0
   is_first = yes
-  return @map ( data ) =>
+  return @_map_errors ( data ) =>
     if is_first
       is_first = no
       method()
@@ -90,7 +128,7 @@ return_id                 = ( x ) -> x
   throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 1
   is_first = yes
-  return @map ( data ) =>
+  return @_map_errors ( data ) =>
     if is_first
       is_first = no
       method data
@@ -119,6 +157,8 @@ return_id                 = ( x ) -> x
     else throw new Error "method arity #{arity} not implemented"
   #.........................................................................................................
   return map method
+
+
 
 #-----------------------------------------------------------------------------------------------------------
 @$ = @remit = ( method ) ->
@@ -151,18 +191,63 @@ return_id                 = ( x ) -> x
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
-@$pass            = -> @map ( data ) -> data
+@$pass            = -> @_map_errors     ( data ) => data
 #...........................................................................................................
-@$as_line         = -> @map ( line ) -> line + '\n'
-@$trim            = -> @map ( line ) -> line.trim()
-@$split_fields    = -> @map ( line ) -> line.split '\t'
+# PRFLR = require './profiler'
+# @$as_line         = @_map_errors PRFLR.wrap 'as_line',      ( line    ) => line + '\n'
+# @$trim            = @_map_errors PRFLR.wrap 'trim',         ( line    ) => line.trim()
+# @$split_fields    = @_map_errors PRFLR.wrap 'split_fields', ( line    ) => line.split '\t'
+@$as_line         = -> @_map_errors     ( line    ) => line + '\n'
+@$trim            = -> @_map_errors     ( line    ) => line.trim()
+@$split_fields    = -> @_map_errors     ( line    ) => line.split '\t'
+@$skip_empty      = -> @filter          ( line    ) => line.length > 0
 #...........................................................................................................
-@$push_to_list    = ( collector ) -> @map ( data ) -> collector.push  data; return data
-@$add_to_set      = ( collector ) -> @map ( data ) -> collector.add   data; return data
+@$push_to_list    = ( collector ) -> @_map_errors ( data ) => collector.push  data; return data
+@$add_to_set      = ( collector ) -> @_map_errors ( data ) => collector.add   data; return data
 #...........................................................................................................
 @$count           = -> throw new Error "not implemented"
-#...........................................................................................................
+@$take            = $take
 @$drain           = $pull_drain
+
+#-----------------------------------------------------------------------------------------------------------
+@$watch = ( method ) ->
+  return @_map_errors ( data ) =>
+    method data
+    return data
+
+#-----------------------------------------------------------------------------------------------------------
+### TAINT not sure how to call this / how to unify with the rest of the API ###
+@_$watch_null = ( method ) ->
+  on_each = ( data ) ->
+    method data
+    return null
+  on_stop = ( abort ) ->
+    method null
+    return null
+  return $pass_through on_each, on_stop
+
+#-----------------------------------------------------------------------------------------------------------
+@$trim_fields = -> @$watch ( fields  ) =>
+  fields[ idx ] = field.trim() for field, idx in fields
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@$split_tsv = ->
+  R = []
+  R.push @$split()
+  R.push @$trim()
+  R.push @$skip_empty()
+  R.push @filter ( line ) -> not line.startsWith '#'
+  R.push @$split_fields()
+  R.push @$trim_fields()
+  return @pull R...
+
+#-----------------------------------------------------------------------------------------------------------
+@pull = ( methods... ) ->
+  for method, idx in methods
+    continue if ( type = CND.type_of method ) is 'function'
+    throw new Error "expected a function, got a #{type} for argument # #{idx + 1}"
+  return pull methods...
 
 #-----------------------------------------------------------------------------------------------------------
 @$split = ( settings ) ->
@@ -180,15 +265,12 @@ return_id                 = ( x ) -> x
 @$show = ( settings ) ->
   title     = settings?[ 'title'      ] ? '-->'
   serialize = settings?[ 'serialize'  ] ? JSON.stringify
-  return @map ( data ) ->
-    info title, serialize data
-    return data
+  return @$watch ( data ) => info title, serialize data
 
 #-----------------------------------------------------------------------------------------------------------
 @$as_text = ( settings ) ->
   serialize = settings?[ 'serialize' ] ? JSON.stringify
-  return @map ( data ) ->
-    return serialize data
+  return @_map_errors ( data ) => serialize data
 
 
 #===========================================================================================================
@@ -262,161 +344,3 @@ return_id                 = ( x ) -> x
   pull stderr_pipeline...
   #.........................................................................................................
   return null
-
-
-# #===========================================================================================================
-# # ISA METHODS
-# #-----------------------------------------------------------------------------------------------------------
-# ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
-# ### TAINT copied from PipeDreams ###
-# @_isa_nodestream            = ( x ) -> x instanceof ( require 'stream' ).Stream
-# @_isa_readable_nodestream   = ( x ) -> ( @_isa_nodestream x ) and x.readable
-# @_isa_writable_nodestream   = ( x ) -> ( @_isa_nodestream x ) and x.writable
-# @_isa_readonly_nodestream   = ( x ) -> ( @_isa_nodestream x ) and x.readable and not x.writable
-# @_isa_writeonly_nodestream  = ( x ) -> ( @_isa_nodestream x ) and x.writable and not x.readable
-# @_isa_duplex_nodestream     = ( x ) -> ( @_isa_nodestream x ) and x.readable and     x.writable
-
-# #-----------------------------------------------------------------------------------------------------------
-# @_type_of = ( x ) ->
-#   return 'nodestream' if @_isa_nodestream x
-#   return CND.type_of x
-
-# #-----------------------------------------------------------------------------------------------------------
-# @new_stream = ( path ) ->
-#   self = @
-#   #.........................................................................................................
-#   R             = {}
-#   R.transforms  = []
-#   #.........................................................................................................
-#   ### TAINT strictly, no need to inline these methods; could be same for all instances, except @ binding ###
-#   R.pipe = ( transform_info ) ->
-#     type      = null
-#     mode      = null
-#     arity     = null
-#     transform = null
-#     switch type = self._type_of transform_info
-#       when 'function'
-#         throw new Error "### currently not supported ###"
-#       when 'PIPESTREAMS/transform-info'
-#         type                      = 'function'
-#         { method, arity, mode, }  = transform_info
-#         transform                 = method
-#       when 'nodestream'
-#         transform                 = transform_info
-#       else
-#         throw new Error "expected a NodeJS stream, a PIPESTREAMS/transform-info or a function, got a #{type}"
-#     @transforms.push { type, mode, arity, transform, }
-#     return @
-#   #.........................................................................................................
-#   R.on = ( P... ) ->
-#     input.on P...
-#   #.........................................................................................................
-#   input = FS.createReadStream path, { highWaterMark: 120, encoding: 'utf-8', }
-#   #.........................................................................................................
-#   input.on 'data', ( chunk ) ->
-#     # debug '22010', rpr chunk
-#     # debug '22010', rpr R.transforms
-#     this_collector  = [ chunk, ]
-#     next_collector  = []
-#     for { type, mode, arity, transform, }, transform_idx in R.transforms
-#       #.....................................................................................................
-#       switch type
-#         #...................................................................................................
-#         when 'function'
-#           ### TAINT only works with synchronous transforms ###
-#           handler = ( next_value ) =>
-#             next_collector.push next_value
-#           while this_collector.length > 0
-#             this_value = this_collector.shift()
-#             transform this_value, handler
-#           this_collector  = next_collector
-#           next_collector  = []
-#         #...................................................................................................
-#         when 'nodestream'
-#           ### TAINT honor backpressure ###
-#           while this_collector.length > 0
-#             this_value = this_collector.shift()
-#             transform.write this_value
-#         #...................................................................................................
-#         else
-#           throw new Error "expected a NodeJS stream or a function, got a #{CND.type_of transform}"
-#   #.........................................................................................................
-#   # input.on 'end', -> urge 'input ended'
-#   # input.on 'close', -> urge 'input closed'
-#   #.........................................................................................................
-#   return R
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$ = @remit = ( method ) ->
-#   throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-#   throw new Error "### MEH ###" unless ( arity = method.length ) is 2
-#   R =
-#     '~isa':     'PIPESTREAMS/transform-info'
-#     mode:       'sync'
-#     method:     method
-#     arity:      arity
-#   return R
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$async = @remit_async = ( method ) ->
-#   throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-#   throw new Error "### MEH ###" unless ( arity = method.length ) is 2
-#   R =
-#     '~isa':     'PIPESTREAMS/transform-info'
-#     mode:       'async'
-#     method:     method
-#     arity:      arity
-#   return R
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$pass = ->
-#   ### TAINT rewrite as observer transform (without the `send` argument) ###
-#   return @$ ( data, send ) -> send data
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$show = ->
-#   ### TAINT rewrite as observer transform (without the `send` argument) ###
-#   my_info = CND.get_logger 'info', '*'
-#   return @$ ( data, send ) ->
-#     send data
-#     my_info rpr data
-#     return null
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$split = ->
-#   main_send = null
-#   #.........................................................................................................
-#   assembler = @_new_line_assembler { extra: false, splitter: '\n', }, ( error, line ) ->
-#     return main_send.error error if error?
-#     main_send line
-#   #.........................................................................................................
-#   return @$ ( chunk, send ) =>
-#     main_send = send
-#     assembler chunk
-#     return null
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$as_line = ( stringify ) ->
-#   stringify ?= JSON.stringify
-#   return @$ ( data, send ) =>
-#     send ( if ( CND.isa_text data ) then data else stringify data ) + '\n'
-#     return null
-
-# # debug '33631', transform is transform.pipe()
-
-# # transform
-# #   .pipe 42
-# #   .pipe 'foo'
-# #   .pipe 'bar'
-
-
-# # debug '78000', transform
-
-
-
-
-
-
-
-
-
