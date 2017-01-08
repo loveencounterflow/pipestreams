@@ -44,6 +44,9 @@ through                   = require 'pull-through'
 pull_async_map            = require 'pull-stream/throughs/async-map'
 #...........................................................................................................
 return_id                 = ( x ) -> x
+#...........................................................................................................
+
+
 
 ### This is the original `pull-stream/throughs/map` implementation with the `try`/`catch` clause removed so
 all errors are thrown. This, until we find out how to properly handle errors the pull-streams way. Note
@@ -193,13 +196,9 @@ this._map_errors = function (mapper) {
 #-----------------------------------------------------------------------------------------------------------
 @$pass            = -> @_map_errors     ( data ) => data
 #...........................................................................................................
-# PRFLR = require './profiler'
-# @$as_line         = @_map_errors PRFLR.wrap 'as_line',      ( line    ) => line + '\n'
-# @$trim            = @_map_errors PRFLR.wrap 'trim',         ( line    ) => line.trim()
-# @$split_fields    = @_map_errors PRFLR.wrap 'split_fields', ( line    ) => line.split '\t'
 @$as_line         = -> @_map_errors     ( line    ) => line + '\n'
 @$trim            = -> @_map_errors     ( line    ) => line.trim()
-@$split_fields    = -> @_map_errors     ( line    ) => line.split '\t'
+@$split_fields    = -> @_map_errors     ( line    ) => line.split /\s*\t\s*/
 @$skip_empty      = -> @filter          ( line    ) => line.length > 0
 #...........................................................................................................
 @$push_to_list    = ( collector ) -> @_map_errors ( data ) => collector.push  data; return data
@@ -227,6 +226,17 @@ this._map_errors = function (mapper) {
   return $pass_through on_each, on_stop
 
 #-----------------------------------------------------------------------------------------------------------
+@$name_fields = ( names ) ->
+  throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of names ) is 'list'
+  return @_map_errors ( fields ) =>
+    throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of fields ) is 'list'
+    R = {}
+    for value, idx in fields
+      name      = names[ idx ] ?= "field_#{idx}"
+      R[ name ] = value
+    return R
+
+#-----------------------------------------------------------------------------------------------------------
 @$trim_fields = -> @$watch ( fields  ) =>
   fields[ idx ] = field.trim() for field, idx in fields
   return null
@@ -239,7 +249,7 @@ this._map_errors = function (mapper) {
   R.push @$skip_empty()
   R.push @filter ( line ) -> not line.startsWith '#'
   R.push @$split_fields()
-  R.push @$trim_fields()
+  # R.push @$trim_fields()
   return @pull R...
 
 #-----------------------------------------------------------------------------------------------------------

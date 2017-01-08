@@ -16,7 +16,11 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
-ƒ                         = CND.format_number.bind CND
+# ƒ                         = CND.format_number.bind CND
+#...........................................................................................................
+new_numeral               = require 'numeral'
+format_float              = ( x ) -> ( new_numeral x ).format '0,0.000'
+format_integer            = ( x ) -> ( new_numeral x ).format '0,0'
 
 
 @timers    = {}
