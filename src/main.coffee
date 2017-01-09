@@ -38,13 +38,13 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
 $pass_through             = require 'pull-stream/throughs/through'
 $pull_drain               = require 'pull-stream/sinks/drain'
 $take                     = require 'pull-stream/throughs/take'
+$stringify                = require 'pull-stringify'
 pull                      = require 'pull-stream'
 map                       = pull.map.bind pull
-through                   = require 'pull-through'
+pull_through              = require 'pull-through'
 pull_async_map            = require 'pull-stream/throughs/async-map'
 #...........................................................................................................
 return_id                 = ( x ) -> x
-#...........................................................................................................
 
 
 
@@ -161,26 +161,42 @@ this._map_errors = function (mapper) {
   #.........................................................................................................
   return map method
 
-
-
 #-----------------------------------------------------------------------------------------------------------
-@$ = @remit = ( method ) ->
-  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  switch arity = method.length
-    when 2 then null
-    else throw new Error "method arity #{arity} not implemented"
+@$ = @remit = ( hint, method ) ->
+  switch arity = arguments.length
+    when 1
+      method  = hint
+      hint    = null
+    when 2
+      throw new Error "unknown hint #{rpr hint}" unless hint is 'null'
+    else throw new Error "expected 1 or 2 arguments, got #{arity}"
   #.........................................................................................................
-  self  = null
-  send  = ( data ) => self.queue data
+  switch client_arity = method.length
+    when 2 then null
+    else throw new Error "method arity #{client_arity} not implemented"
+  #.........................................................................................................
+  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  #.........................................................................................................
+  self    = null
+  send    = ( data ) => self.queue data
+  on_end  = null
   #.........................................................................................................
   on_data = ( data ) ->
     self = @
     method data, send
+    self = null
+    return null
   #.........................................................................................................
-  R = through on_data
-    # @queue null
+  if hint is 'null'
+    on_end = ->
+      self = @
+      method null, send
+      self = null
+      ### somewhat hidden in the docs: *must* call `@queue null` to end stream: ###
+      @queue null
+      return null
   #.........................................................................................................
-  return R
+  return pull_through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 @async_map = pull_async_map
@@ -281,6 +297,9 @@ this._map_errors = function (mapper) {
 @$as_text = ( settings ) ->
   serialize = settings?[ 'serialize' ] ? JSON.stringify
   return @_map_errors ( data ) => serialize data
+
+#-----------------------------------------------------------------------------------------------------------
+@$stringify = ( settings ) -> $stringify settings
 
 
 #===========================================================================================================

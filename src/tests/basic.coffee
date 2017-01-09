@@ -18,9 +18,15 @@ PATH                      = require 'path'
 FS                        = require 'fs'
 OS                        = require 'os'
 TAP                       = require 'tap'
+#...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
-
+#...........................................................................................................
+pull                      = require 'pull-stream'
+$take                     = require 'pull-stream/throughs/take'
+$values                   = require 'pull-stream/sources/values'
+$pull_drain               = require 'pull-stream/sinks/drain'
+pull_through              = require 'pull-through'
 
 # #-----------------------------------------------------------------------------------------------------------
 # TAP.test "test line assembler", ( T ) ->
@@ -156,6 +162,38 @@ PS                        = require '../..'
 #     output.end()
 #   #.........................................................................................................
 #   return null
+
+
+# #-----------------------------------------------------------------------------------------------------------
+# TAP.test "remit without end detection", ( T ) ->
+#   pipeline = []
+#   pipeline.push $values Array.from 'abcdef'
+#   pipeline.push $ ( data, send ) ->
+#     send data
+#     send '*' + data + '*'
+#   pipeline.push PS.$show()
+#   pipeline.push $pull_drain()
+#   PS.pull pipeline...
+#   T.pass "ok"
+#   T.end()
+
+#-----------------------------------------------------------------------------------------------------------
+TAP.test "remit with end detection", ( T ) ->
+  pipeline = []
+  pipeline.push $values Array.from 'abcdef'
+  # pipeline.push pull_through ( ( data ) -> urge data ), ( -> urge 'ok'; @queue null )
+  # pipeline.push pull_through ( ( data ) -> urge data ), null
+  pipeline.push $ 'null', ( data, send ) ->
+    if data?
+      send data
+      send '*' + data + '*'
+    else
+      send 'ok'
+  pipeline.push PS.$show()
+  pipeline.push $pull_drain()
+  PS.pull pipeline...
+  T.pass "ok"
+  T.end()
 
 
 
