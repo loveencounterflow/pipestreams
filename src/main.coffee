@@ -88,7 +88,8 @@ this._map_errors = function (mapper) {
 #-----------------------------------------------------------------------------------------------------------
 @_new_file_sink_using_stps = ( P... ) ->
   stream  = FS.createWriteStream P...
-  R       = STPS.sink stream
+  ### TAINT intermediate solution ###
+  R       = STPS.sink stream, ( error ) => throw error if error?
   R.on    = ( P... ) -> stream.on P...
   return R
 
