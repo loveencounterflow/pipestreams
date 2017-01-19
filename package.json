@@ -8,9 +8,6 @@
     "doctoc": "doctoc README.md",
     "test": "npm run build && tap --harmony lib/tests/*.js"
   },
-  "publishConfig": {
-    "registry": "http://192.168.178.48:4873/"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/loveencounterflow/pipestreams.git"
