@@ -9,7 +9,7 @@
     "test": "npm run build && tap --harmony lib/tests/*.js"
   },
   "publishConfig": {
-    "registry": "https://your-subdomain.registry.nodejitsu.com"
+    "registry": "http://192.168.178.48:4873/"
   },
   "repository": {
     "type": "git",
