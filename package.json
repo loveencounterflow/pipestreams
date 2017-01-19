@@ -1,6 +1,6 @@
 {
   "name": "pipestreams",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "experimental streaming",
   "main": "lib/main.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "doctoc": "doctoc README.md",
     "test": "npm run build && tap --harmony lib/tests/*.js"
   },
-   "publishConfig": {
+  "publishConfig": {
     "registry": "https://your-subdomain.registry.nodejitsu.com"
   },
   "repository": {
