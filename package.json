@@ -16,6 +16,7 @@
     "url": "https://github.com/loveencounterflow/pipestreams.git"
   },
   "keywords": [
+    "pull streams",
     "pipes",
     "streams",
     "through2",
