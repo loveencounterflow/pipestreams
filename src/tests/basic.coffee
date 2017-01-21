@@ -195,6 +195,20 @@ TAP.test "remit with end detection", ( T ) ->
   T.pass "ok"
   T.end()
 
+#-----------------------------------------------------------------------------------------------------------
+TAP.test "wrap FS object for sink", ( T ) ->
+  output_path = '/tmp/pipestreams-test-output.txt'
+  output_file = FS.createWriteStream output_path
+  sink        = PS.new_file_sink output_file
+  pipeline = []
+  pipeline.push $values Array.from 'abcdef'
+  pipeline.push PS.$show()
+  pipeline.push sink
+  pull pipeline...
+  output_file.on 'finish', =>
+    T.ok CND.equals 'abcdef', FS.readFileSync output_path, { encoding: 'utf-8', }
+    T.end()
+
 
 
 

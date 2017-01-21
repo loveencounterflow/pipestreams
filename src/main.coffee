@@ -78,6 +78,16 @@ this._map_errors = function (mapper) {
 }
 ```
 
+#===========================================================================================================
+# ISA METHODS
+#-----------------------------------------------------------------------------------------------------------
+### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
+@_isa_njs_stream            = ( x ) -> x instanceof ( require 'stream' ).Stream
+@_isa_readable_njs_stream   = ( x ) -> ( @_isa_njs_njs_stream x ) and x.readable
+@_isa_writable_njs_stream   = ( x ) -> ( @_isa_njs_njs_stream x ) and x.writable
+@_isa_readonly_njs_stream   = ( x ) -> ( @_isa_njs_njs_stream x ) and x.readable and not x.writable
+@_isa_writeonly_njs_stream  = ( x ) -> ( @_isa_njs_njs_stream x ) and x.writable and not x.readable
+@_isa_duplex_njs_stream     = ( x ) -> ( @_isa_njs_njs_stream x ) and x.readable and     x.writable
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -86,8 +96,15 @@ this._map_errors = function (mapper) {
 @_new_file_source_using_stps  = ( P... ) -> STPS.source FS.createReadStream   P...
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_file_sink_using_stps = ( P... ) ->
-  stream  = FS.createWriteStream P...
+@_new_file_sink_using_stps = ( path_or_stream ) ->
+  if CND.isa_text path_or_stream
+    stream  = FS.createWriteStream path_or_stream
+  else
+    unless @_isa_njs_stream path_or_stream
+      throw new Error "expected a path or a stream, got a #{CND.type_of path_or_stream}"
+    unless path_or_stream.writable
+      throw new Error "expected a path or a stream, got a #{CND.type_of path_or_stream}"
+    stream  = path_or_stream
   ### TAINT intermediate solution ###
   R       = STPS.sink stream, ( error ) => throw error if error?
   R.on    = ( P... ) -> stream.on P...
