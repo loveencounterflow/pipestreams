@@ -3,7 +3,7 @@
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'PIPESTREAMS/TESTS'
+badge                     = 'PIPESTREAMS/TESTS/BASIC'
 log                       = CND.get_logger 'plain',     badge
 info                      = CND.get_logger 'info',      badge
 whisper                   = CND.get_logger 'whisper',   badge
@@ -208,7 +208,6 @@ TAP.test "wrap FS object for sink", ( T ) ->
   output_file.on 'finish', =>
     T.ok CND.equals 'abcdef', FS.readFileSync output_path, { encoding: 'utf-8', }
     T.end()
-
 
 
 
