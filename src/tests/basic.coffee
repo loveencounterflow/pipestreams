@@ -209,5 +209,38 @@ TAP.test "wrap FS object for sink", ( T ) ->
     T.ok CND.equals 'abcdef', FS.readFileSync output_path, { encoding: 'utf-8', }
     T.end()
 
-
+#-----------------------------------------------------------------------------------------------------------
+TAP.test "function as pull-stream source", ( T ) ->
+  random = ( n ) =>
+    return ( end, callback ) =>
+      if end?
+        debug '40998', rpr callback
+        debug '40998', rpr end
+        return callback end
+      #only read n times, then stop.
+      n += -1
+      if n < 0
+        return callback true
+      callback null, Math.random()
+      return null
+  #.........................................................................................................
+  pipeline  = []
+  Ø         = ( x ) => pipeline.push x
+  Ø random 10
+  # Ø random 3
+  Ø PS.$collect()
+  Ø $ 'null', ( data, send ) ->
+    if data?
+      T.ok data.length is 10
+      debug data
+      send data
+    else
+      T.ok "function works as pull-stream source"
+      T.end()
+      send null
+  Ø PS.$show()
+  Ø PS.$drain()
+  #.........................................................................................................
+  PS.pull pipeline...
+  return null
 
