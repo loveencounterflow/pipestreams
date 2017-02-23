@@ -126,6 +126,17 @@ this._map_errors = function (mapper) {
 ###
 
 #-----------------------------------------------------------------------------------------------------------
+@new_text_source = ( text ) ->
+  throw new Error "buggy implementation"
+  is_first = yes
+  return ( end, callback ) =>
+    return callback end if end?
+    return callback true unless is_first
+    is_first = no
+    callback null, text
+    return null
+
+#-----------------------------------------------------------------------------------------------------------
 @map_start = ( method ) ->
   throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 0
@@ -308,6 +319,35 @@ this._map_errors = function (mapper) {
   return pull R...
 
 #-----------------------------------------------------------------------------------------------------------
+@$join = ( joiner = null ) ->
+  collector = []
+  length    = 0
+  type      = null
+  is_first  = yes
+  return @$ 'null', ( data, send ) ->
+    if data?
+      if is_first
+        is_first  = no
+        type      = CND.type_of data
+        switch type
+          when 'text'
+            joiner ?= ''
+          when 'buffer'
+            throw new Error "joiner not supported for buffers, got #{rpr joiner}" if joiner?
+          else
+            throw new Error "expected a text or a buffer, got a #{type}"
+      else
+        unless ( this_type = CND.type_of data ) is type
+          throw new Error "expected a #{type}, got a #{this_type}"
+      length += data.length
+      collector.push data
+    else
+      return send '' if ( collector.length is 0 ) or ( length is 0 )
+      return send collector.join '' if type is 'text'
+      return send Buffer.concat collector, length
+    return null
+
+#-----------------------------------------------------------------------------------------------------------
 @$pluck = ( settings ) ->
   throw new Error "need settings 'keys', got #{rpr settings}" unless settings?
   { keys, } = settings
@@ -340,6 +380,12 @@ this._map_errors = function (mapper) {
       send data if send_all
     else
       send collector unless send_all
+    return null
+
+#-----------------------------------------------------------------------------------------------------------
+@$spread = ->
+  return @$ ( collection, send ) =>
+    send element for element in collection
     return null
 
 #-----------------------------------------------------------------------------------------------------------
