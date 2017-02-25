@@ -126,15 +126,10 @@ this._map_errors = function (mapper) {
 ###
 
 #-----------------------------------------------------------------------------------------------------------
-@new_text_source = ( text ) ->
-  throw new Error "buggy implementation"
-  is_first = yes
-  return ( end, callback ) =>
-    return callback end if end?
-    return callback true unless is_first
-    is_first = no
-    callback null, text
-    return null
+### TAINT refactor: `PS.new_source.from_path`, `PS.new_source.from_text`..., `PS.new_sink.as_text` (???) ###
+@new_text_source = ( text ) -> ( require 'pull-stream/sources/values' ) [ text, ]
+@new_text_sink = ->
+  throw new Error "not implemented"
 
 #-----------------------------------------------------------------------------------------------------------
 @map_start = ( method ) ->
@@ -365,21 +360,36 @@ this._map_errors = function (mapper) {
     return Z
 
 #-----------------------------------------------------------------------------------------------------------
-@$collect = ( settings ) ->
-  ### When `settings[ 'collector' ]` is given, use `collector.push data` to push data into that
-  list and do send data on; when `settings[ 'collector' ]` is not given, create a new list,
-  push all data items into it, and send on the collector once the stream has finished. ###
-  if ( collector = settings?[ 'collector' ] )?
-    send_all  = yes
-  else
-    send_all  = no
-    collector = []
-  return @$ 'null', ( data, send ) =>
-    if data?
-      collector.push data
-      send data if send_all
+@$gliding_window = ( width, method ) ->
+  throw new Error "expected a number, got a #{type}" unless ( CND.type_of width ) is 'number'
+  section = []
+  send    = null
+  #.........................................................................................................
+  push = ( x ) ->
+    section.push x
+    R =
+    while section.length > width
+      send section.shift()
+    return null
+  #.........................................................................................................
+  return @$ 'null', ( new_data, send_ ) =>
+    send = send_
+    if new_data?
+      push new_data
+      method section if section.length >= width
     else
-      send collector unless send_all
+      while section.length > 0
+        send section.shift()
+      send null
+    return null
+
+#-----------------------------------------------------------------------------------------------------------
+@$collect = ( settings ) ->
+  throw new Error "API changed" if settings?
+  collector = []
+  return @$ 'null', ( data, send ) =>
+    if data? then collector.push data
+    else send collector
     return null
 
 #-----------------------------------------------------------------------------------------------------------
