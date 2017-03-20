@@ -83,11 +83,11 @@ this._map_errors = function (mapper) {
 #-----------------------------------------------------------------------------------------------------------
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
 @_isa_njs_stream            = ( x ) -> x instanceof ( require 'stream' ).Stream
-@_isa_readable_njs_stream   = ( x ) -> ( @_isa_njs_njs_stream x ) and x.readable
-@_isa_writable_njs_stream   = ( x ) -> ( @_isa_njs_njs_stream x ) and x.writable
-@_isa_readonly_njs_stream   = ( x ) -> ( @_isa_njs_njs_stream x ) and x.readable and not x.writable
-@_isa_writeonly_njs_stream  = ( x ) -> ( @_isa_njs_njs_stream x ) and x.writable and not x.readable
-@_isa_duplex_njs_stream     = ( x ) -> ( @_isa_njs_njs_stream x ) and x.readable and     x.writable
+@_isa_readable_njs_stream   = ( x ) -> ( @_isa_njs_stream x ) and x.readable
+@_isa_writable_njs_stream   = ( x ) -> ( @_isa_njs_stream x ) and x.writable
+@_isa_readonly_njs_stream   = ( x ) -> ( @_isa_njs_stream x ) and x.readable and not x.writable
+@_isa_writeonly_njs_stream  = ( x ) -> ( @_isa_njs_stream x ) and x.writable and not x.readable
+@_isa_duplex_njs_stream     = ( x ) -> ( @_isa_njs_stream x ) and x.readable and     x.writable
 
 
 #-----------------------------------------------------------------------------------------------------------
