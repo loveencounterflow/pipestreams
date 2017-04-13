@@ -40,6 +40,7 @@ $pull_drain               = require 'pull-stream/sinks/drain'
 $take                     = require 'pull-stream/throughs/take'
 $stringify                = require 'pull-stringify'
 pull                      = require 'pull-stream'
+# pull                      = require 'x-pull-stream-continuable'
 map                       = pull.map.bind pull
 pull_through              = require 'pull-through'
 pull_async_map            = require 'pull-stream/throughs/async-map'
