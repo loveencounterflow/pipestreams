@@ -49,6 +49,72 @@ Event_emitter             = require 'eventemitter3'
 return_id                 = ( x ) -> x
 
 
+#===========================================================================================================
+# EVENTS AND EMITTERS
+#-----------------------------------------------------------------------------------------------------------
+@_new_event_emitter = ->
+  R               = new Event_emitter()
+  _emit           = R.emit.bind R
+  #.........................................................................................................
+  R.emit = ( event_name, P... ) ->
+    _emit '*',  event_name, P... unless event_name is '*'
+    _emit       event_name, P...
+  # #.........................................................................................................
+  # R.on = ( name, P... ) ->
+  #   # ### experimental: accept only 'namespaced' event names a la 'foo/bar' and known names
+  #   # so as to prevent accidental usage of bogus event names like `end`, `close`, `finish` etc: ###
+  #   # unless ( '/' in name ) or ( name is 'stop' )
+  #   #   throw new Error "unknown event name #{rpr name}"
+  #   emitter.on name, P...
+  #.........................................................................................................
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@new_event_collector = ( for_event_name, method ) ->
+  switch arity = arguments.length
+    when 0 then null
+    when 2
+      unless ( type = CND.type_of for_event_name ) is 'text'
+        throw new Error "expected a text, got a #{type}"
+      unless ( type = CND.type_of method ) is 'function'
+        throw new Error "expected a function, got a #{type}"
+    else throw new Error "expected 0 or 2 arguments, got #{arity}"
+  #.........................................................................................................
+  R               = @_new_event_emitter()
+  R._event_counts = {}
+  R._source_count = 0
+  R._emitters     = new WeakMap()
+  #.........................................................................................................
+  aggregator = ( event_name ) ->
+    event_count = R._event_counts[ event_name ] = ( R._event_counts[ event_name ] ? 0 ) + 1
+    R.emit event_name if event_count is R._source_count
+    return null
+  #.........................................................................................................
+  R.add = ( emitter ) ->
+    ### TAINT only works with PipeStreams event emitters; could overwrite `emit` method otherwise ###
+    unless ( type = CND.type_of emitter.on ) is 'function'
+      throw new Error "expected an event emitter with an `on` method, got a #{type}"
+    throw new Error "got duplicate emitter" if R._emitters.has emitter
+    R._emitters.set emitter, 1
+    R._source_count += +1
+    emitter.on '*', aggregator
+    return emitter
+  #.........................................................................................................
+  R.on for_event_name, method if method?
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@_mixin_event_emitter = ( method ) ->
+  emitter = @_new_event_emitter()
+  #.........................................................................................................
+  method.on = ( event_name, P... ) ->
+    emitter.on event_name, P...
+  #.........................................................................................................
+  method.emit = ( event_name, P... ) ->
+    emitter.emit event_name, P...
+  #.........................................................................................................
+  return method
+
 
 ### This is the original `pull-stream/throughs/map` implementation with the `try`/`catch` clause removed so
 all errors are thrown. This, until we find out how to properly handle errors the pull-streams way. Note
@@ -97,7 +163,6 @@ this._map_errors = function (mapper) {
 @new_file_sink                = ( P... ) -> @_new_file_sink_using_stps        P...
 @_new_file_source_using_stps  = ( P... ) -> STPS.source FS.createReadStream   P...
 
-XXX_idx = 0
 #-----------------------------------------------------------------------------------------------------------
 @_new_file_sink_using_stps = ( path_or_stream ) ->
   if CND.isa_text path_or_stream
@@ -112,15 +177,8 @@ XXX_idx = 0
     stream  = path_or_stream
   ### TAINT intermediate solution ###
   R       = STPS.sink stream, ( error ) => throw error if error?
-  emitter = new Event_emitter()
-  #.........................................................................................................
-  ### TAINT put this code and the event emitter code from `$drain` into single private method ###
-  R.on    = ( name, P... ) ->
-    # ### experimental: accept only 'namespaced' event names a la 'foo/bar' and known names
-    # so as to prevent accidental usage of bogus event names like `end`, `close`, `finish` etc: ###
-    # unless ( '/' in name ) or ( name is 'stop' )
-    #   throw new Error "unknown event name #{rpr name}"
-    emitter.on name, P...
+  emitter = @_new_event_emitter()
+  R.on    = ( name, P... ) -> emitter.on name, P...
   #.........................................................................................................
   stream.on 'finish', ->
     unless emitter.listeners 'stop', true
@@ -271,13 +329,7 @@ XXX_idx = 0
 
 #-----------------------------------------------------------------------------------------------------------
 @$drain = ( on_end = null ) ->
-  emitter = new Event_emitter()
-  #.........................................................................................................
-  R = $pull_drain null, ->
-    emitter.emit 'stop'
-    return null
-  #.........................................................................................................
-  R.on = ( P... ) -> emitter.on P...
+  R = @_mixin_event_emitter $pull_drain null, -> R.emit 'stop'
   R.on 'stop', on_end if on_end?
   return R
 
