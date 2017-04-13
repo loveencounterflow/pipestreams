@@ -39,6 +39,7 @@ $pass_through             = require 'pull-stream/throughs/through'
 $pull_drain               = require 'pull-stream/sinks/drain'
 $take                     = require 'pull-stream/throughs/take'
 $stringify                = require 'pull-stringify'
+$values                   = require 'pull-stream/sources/values'
 pull                      = require 'pull-stream'
 map                       = pull.map.bind pull
 pull_through              = require 'pull-through'
@@ -127,9 +128,12 @@ this._map_errors = function (mapper) {
 
 #-----------------------------------------------------------------------------------------------------------
 ### TAINT refactor: `PS.new_source.from_path`, `PS.new_source.from_text`..., `PS.new_sink.as_text` (???) ###
-@new_text_source = ( text ) -> ( require 'pull-stream/sources/values' ) [ text, ]
+@new_text_source = ( text ) -> $values [ text, ]
 @new_text_sink = ->
   throw new Error "not implemented"
+
+#-----------------------------------------------------------------------------------------------------------
+@new_value_source = ( values ) -> $values values
 
 #-----------------------------------------------------------------------------------------------------------
 @map_start = ( method ) ->
