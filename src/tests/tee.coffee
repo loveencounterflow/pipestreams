@@ -60,9 +60,9 @@ TAP.test "tee (using pull-tee)", ( T ) ->
     # debug '30091', FS.readFileSync sink_2_path, { encoding: 'utf-8', }
     T.end()
   #.........................................................................................................
-  sink_0.on 'finish', => sink_0_finished = yes; finish()
-  sink_1.on 'finish', => sink_1_finished = yes; finish()
-  sink_2.on 'finish', => sink_2_finished = yes; finish()
+  sink_0.on 'stop', => sink_0_finished = yes; finish()
+  sink_1.on 'stop', => sink_1_finished = yes; finish()
+  sink_2.on 'stop', => sink_2_finished = yes; finish()
   #.........................................................................................................
   ppline_1  = []
   ppline_1.push $keep_odd()
@@ -119,9 +119,9 @@ TAP.test "tee (using pipestreams)", ( T ) ->
     # debug '30091', FS.readFileSync sink_2_path, { encoding: 'utf-8', }
     T.end()
   #.........................................................................................................
-  sink_0.on 'finish', => sink_0_finished = yes; finish()
-  sink_1.on 'finish', => sink_1_finished = yes; finish()
-  sink_2.on 'finish', => sink_2_finished = yes; finish()
+  sink_0.on 'stop', => sink_0_finished = yes; finish()
+  sink_1.on 'stop', => sink_1_finished = yes; finish()
+  sink_2.on 'stop', => sink_2_finished = yes; finish()
   #.........................................................................................................
   ppline_1  = []
   ppline_1.push $keep_odd()

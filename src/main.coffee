@@ -97,11 +97,14 @@ this._map_errors = function (mapper) {
 @new_file_sink                = ( P... ) -> @_new_file_sink_using_stps        P...
 @_new_file_source_using_stps  = ( P... ) -> STPS.source FS.createReadStream   P...
 
+XXX_idx = 0
 #-----------------------------------------------------------------------------------------------------------
 @_new_file_sink_using_stps = ( path_or_stream ) ->
   if CND.isa_text path_or_stream
+    path    = path_or_stream
     stream  = FS.createWriteStream path_or_stream
   else
+    path    = path_or_stream.path ? '<UNKNOWN PATH>'
     unless @_isa_njs_stream path_or_stream
       throw new Error "expected a path or a stream, got a #{CND.type_of path_or_stream}"
     unless path_or_stream.writable
@@ -109,11 +112,21 @@ this._map_errors = function (mapper) {
     stream  = path_or_stream
   ### TAINT intermediate solution ###
   R       = STPS.sink stream, ( error ) => throw error if error?
-  seen_events = []
-  R.on    = ( P... ) -> stream.on P...
-  R.on 'finish', -> seen_events.push 'finish'; debug '777822', '###############', seen_events
-  R.on 'end', -> seen_events.push 'end'; debug '777822', '###############', seen_events
-  R.on 'close', -> seen_events.push 'close'; debug '777822', '###############', seen_events
+  emitter = new Event_emitter()
+  #.........................................................................................................
+  ### TAINT put this code and the event emitter code from `$drain` into single private method ###
+  R.on    = ( name, P... ) ->
+    # ### experimental: accept only 'namespaced' event names a la 'foo/bar' and known names
+    # so as to prevent accidental usage of bogus event names like `end`, `close`, `finish` etc: ###
+    # unless ( '/' in name ) or ( name is 'stop' )
+    #   throw new Error "unknown event name #{rpr name}"
+    emitter.on name, P...
+  #.........................................................................................................
+  stream.on 'finish', ->
+    unless emitter.listeners 'stop', true
+      warn "stream to #{rpr path} finished without listener"
+    emitter.emit 'stop'
+  #.........................................................................................................
   return R
 
 
@@ -261,11 +274,11 @@ this._map_errors = function (mapper) {
   emitter = new Event_emitter()
   #.........................................................................................................
   R = $pull_drain null, ->
-    emitter.emit 'end'
+    emitter.emit 'stop'
     return null
   #.........................................................................................................
   R.on = ( P... ) -> emitter.on P...
-  R.on 'end', on_end if on_end?
+  R.on 'stop', on_end if on_end?
   return R
 
 #-----------------------------------------------------------------------------------------------------------
