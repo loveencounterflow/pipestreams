@@ -44,6 +44,7 @@ pull                      = require 'pull-stream'
 map                       = pull.map.bind pull
 pull_through              = require 'pull-through'
 pull_async_map            = require 'pull-stream/throughs/async-map'
+Event_emitter             = require 'eventemitter3'
 #...........................................................................................................
 return_id                 = ( x ) -> x
 
@@ -252,7 +253,16 @@ this._map_errors = function (mapper) {
 @$take            = $take
 
 #-----------------------------------------------------------------------------------------------------------
-@$drain = ( on_end = null ) -> $pull_drain null, on_end
+@$drain = ( on_end = null ) ->
+  emitter = new Event_emitter()
+  #.........................................................................................................
+  R = $pull_drain null, ->
+    emitter.emit 'end'
+    return null
+  #.........................................................................................................
+  R.on = ( P... ) -> emitter.on P...
+  R.on 'end', on_end if on_end?
+  return R
 
 #-----------------------------------------------------------------------------------------------------------
 @$watch = ( method ) ->
