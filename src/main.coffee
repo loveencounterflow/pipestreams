@@ -109,7 +109,11 @@ this._map_errors = function (mapper) {
     stream  = path_or_stream
   ### TAINT intermediate solution ###
   R       = STPS.sink stream, ( error ) => throw error if error?
+  seen_events = []
   R.on    = ( P... ) -> stream.on P...
+  R.on 'finish', -> seen_events.push 'finish'; debug '777822', '###############', seen_events
+  R.on 'end', -> seen_events.push 'end'; debug '777822', '###############', seen_events
+  R.on 'close', -> seen_events.push 'close'; debug '777822', '###############', seen_events
   return R
 
 
