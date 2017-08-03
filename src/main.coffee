@@ -586,6 +586,8 @@ this._map_errors = function (mapper) {
 #
 #-----------------------------------------------------------------------------------------------------------
 @spawn = ( command, settings ) ->
+  ### Ecept for the error handler `{ on_error: ( error ) -> ... }`, all attributes of `settings` will be
+  passed on to NodeJS's `child_process.spawn`. ###
   ### TAINT must also consider exit code other than zero ###
   #.........................................................................................................
   switch arity = arguments.length
