@@ -585,7 +585,12 @@ this._map_errors = function (mapper) {
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
-@spawn = ( command, settings ) ->
+@spawn = ( P... ) -> ( @spawn_with_cp_and_source P... )[ 1 ]
+
+#===========================================================================================================
+#
+#-----------------------------------------------------------------------------------------------------------
+@spawn_with_cp_and_source = ( command, settings ) ->
   ### Ecept for the error handler `{ on_error: ( error ) -> ... }`, all attributes of `settings` will be
   passed on to NodeJS's `child_process.spawn`. ###
   ### TAINT must also consider exit code other than zero ###
@@ -620,7 +625,8 @@ this._map_errors = function (mapper) {
   stdout_pipeline.push stdout
   # stdout_pipeline.push @$watch ( data ) -> whisper '22827', rpr data
   #.........................................................................................................
-  return pull stdout_pipeline...
+  source = pull stdout_pipeline...
+  return [ cp, source, ]
 
 
 #===========================================================================================================
