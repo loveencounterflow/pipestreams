@@ -615,9 +615,9 @@ this._map_errors = function (mapper) {
   stderr_pipeline.push @$ 'null', ( lines, send ) ->
     send lines
     if lines? and lines.length > 0
-      message = lines.join '\n'
-      return on_error message if on_error?
-      throw new Error message
+      error = new Error lines.join '\n'
+      return on_error error if on_error?
+      throw error
     return null
   stderr_pipeline.push @$drain()
   pull stderr_pipeline...
