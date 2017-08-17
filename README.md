@@ -127,8 +127,14 @@ Worse is possible:
 All of the settings present in the optional second argument to `PS.spawn` are passed through to the
 underlying NodeJS `child_process.spawn` method **except** for
 
-* `binary` <boolean>—indicates whether `stdout` will be left as a buffer, or else decoded as UTF-8 text and
+* `binary <boolean>`—indicates whether `stdout` will be left as a buffer, or else decoded as UTF-8 text and
   split into lines (using `PS.$split()`).
+
+* `error_to_exit <boolean>`—when `true`, will collect all lines sent to `stderr` and include them in the
+  `exit` event value under the key `error`, joined with newline characters (`\n`). If no events came over
+  `stderr` or if the resulting string was empty, `value.error` will be set to `null`. This is intended to
+  facilitate error handling in a lot of cases where exit codes and / or messages sent to `stderr` indicate
+  problems with a command.
 
 The other settings are as follows (text copied from
 [the NodeJS docs](https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options)):

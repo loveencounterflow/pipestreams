@@ -610,7 +610,8 @@ this._map_errors = function (mapper) {
     else throw new Error "expected a text or list for command, got a #{type}"
   #.........................................................................................................
   settings          = Object.assign { shell, }, settings
-  stdout_is_binary  = pluck settings, 'binary', no
+  stdout_is_binary  = pluck settings, 'binary',         no
+  error_to_exit     = pluck settings, 'error_to_exit',  no
   command_source    = @new_value_source [ [ 'command', command, ] ]
   cp                = CP.spawn command, settings
   #.........................................................................................................
@@ -685,6 +686,22 @@ this._map_errors = function (mapper) {
   #.........................................................................................................
   funnel.push confluence
   funnel.push $ensure_event_order()
+  #.........................................................................................................
+  if error_to_exit
+    funnel.push do =>
+      error = []
+      return @$ ( event, send ) =>
+        if event?
+          [ key, value, ] = event
+          switch key
+            when 'command', 'stdout'  then send event
+            when 'stderr'             then error.push value.trimRight()
+            when 'exit'
+              value.error = error.join '\n'
+              value.error = null if value.error.length is 0
+              send event
+            else throw new Error "internal error 110918"
+  #.........................................................................................................
   source = pull funnel...
   return [ cp, source, ]
 
