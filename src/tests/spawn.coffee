@@ -18,6 +18,7 @@ PATH                      = require 'path'
 FS                        = require 'fs'
 OS                        = require 'os'
 TAP                       = require 'tap'
+# TAP                       = require 'tape'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS

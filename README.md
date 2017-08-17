@@ -64,11 +64,18 @@ shell commands). That source provides the following characteristics and guarante
   first argument with which `spawn` was initiated. Next come the `stdout` and `stderr` events. The last
   event is always `exit`; its value is an object with a `code` and a `signal` property.
 
-* The `signal` property will name the signal, if any, with which the spawned process was terminated; if
-  it is present and known and the `code` value was not also set (which should be impossible), then the
-  `code` value is set to `128` plus the numerical equivalent (the signal number) of the signal.
-  Otherwise, only `code` is set; in most cases, it will be `0` indicating success or else a value
-  greater than `0` (frequently `1`) indicating failure.
+* In between the initial `command` and the final `exit` events, any number of `stdout` and `stderr` events
+  may occur, depending on the command(s) executed. **Note that the relative ordering between output events
+  is not well-defined across sub-commands**; when you have two commands that both write to output, then it
+  is possible that you see the events coming in their 'natural' order *most* of the time and 'out of order'
+  *some* of the time (relative ordering of each sub-command's writes to a single channel *will* be
+  preserved, though). **There's no way to fix this** as it is caused by system-level contingencies.
+
+* The `signal` property of the `exit` event will name the signal, if any, with which the spawned process was
+  terminated; if it is present and known and the `code` value was not also set (which should be impossible),
+  then the `code` value is set to `128` plus the numerical equivalent (the signal number) of the signal.
+  Otherwise, only `code` is set; in most cases, it will be `0` indicating success or else a value greater
+  than `0` (frequently `1`) indicating failure.
 
 * Since it turns out that in practice neither error codes, nor signals or output to `stderr` are
   sufficiently reliable to judge about success or failure in a generic fashion, PipeStreams `spawn` will
