@@ -114,6 +114,31 @@ Worse is possible:
 ["exit",{"code":155,"signal":"SIGPROF"}]
 ```
 
+#### `spawn` settings
+
+All of the settings present in the optional second argument to `PS.spawn` are passed through to the
+underlying NodeJS `child_process.spawn` method **except** for
+
+* `binary` <boolean>—indicates whether `stdout` will be left as a buffer, or else decoded as UTF-8 text and
+  split into lines (using `PS.$split()`).
+
+The other settings are as follows (text copied from
+[the NodeJS docs](https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options)):
+
+* `cwd <string>`—Current working directory of the child process
+* `env <Object>`—Environment key-value pairs
+* `argv0 <string>`—Explicitly set the value of `argv[0]` sent to the child process. This will be set to
+  `command` if not specified.
+* `stdio <Array> | <string>`—Child's stdio configuration. (See `options.stdio`)
+* `detached <boolean>`—Prepare child to run independently of its parent process. Specific behavior depends
+  on the platform, see `options.detached`)
+* `uid <number>`—Sets the user identity of the process. (See `setuid(2)`.)
+* `gid <number>`—Sets the group identity of the process. (See `setgid(2)`.)
+* `shell <boolean> | <string>`—If true, runs command inside of a shell. Uses `/bin/sh` on UNIX, and
+  `process.env.ComSpec` on Windows. A different shell can be specified as a string. See Shell Requirements
+  and Default Windows Shell. Defaults to `false` (no shell) [in the case of a command string, and to `true`
+  when a list for `command` is passed in].
+
 
 ### @$sample = ( p = 0.5, options ) ->
 
