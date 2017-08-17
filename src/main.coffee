@@ -51,6 +51,12 @@ Event_emitter             = require 'eventemitter3'
 #...........................................................................................................
 return_id                 = ( x ) -> x
 # { step, }                 = CND.suspend
+#-----------------------------------------------------------------------------------------------------------
+pluck = ( x, key, fallback ) ->
+  R = x[ key ]
+  R = fallback if R is undefined
+  delete x[ key ]
+  return R
 
 
 #===========================================================================================================
@@ -598,8 +604,14 @@ this._map_errors = function (mapper) {
     when 1, 2 then null
     else throw new Error "expected 1 or 2 arguments, got #{arity}"
   #.........................................................................................................
-  settings          = Object.assign { shell: yes, }, settings
-  delete settings.on_error if ( on_error = settings.on_error )?
+  switch type = CND.type_of command
+    when 'text'   then shell = yes
+    when 'list'   then shell = no
+    else throw new Error "expected a text or list for command, got a #{type}"
+  #.........................................................................................................
+  settings          = Object.assign { shell, }, settings
+  stdout_is_binary  = pluck settings, 'binary', no
+  command_source    = @new_value_source [ [ 'command', command, ] ]
   cp                = CP.spawn command, settings
   #.........................................................................................................
   stdout            = STPS.source cp.stdout
@@ -607,47 +619,43 @@ this._map_errors = function (mapper) {
   #.........................................................................................................
   stdout_pipeline   = []
   stderr_pipeline   = []
-  spawn_pipeline    = []
-  signal_pipeline   = []
+  funnel            = []
+  event_pipeline    = []
+  event_buffer      = []
   #.........................................................................................................
   stdout_pipeline.push stdout
-  ### TAINT make `$split()` optional ###
-  stdout_pipeline.push @$split()
-  # stdout_pipeline.push PS.async_map ( data, handler ) -> defer -> handler null, data
+  stdout_pipeline.push @$split() unless stdout_is_binary
+  # stdout_pipeline.push @async_map ( data, handler ) -> defer -> handler null, data
   stdout_pipeline.push @map ( line ) -> [ 'stdout', line, ]
   #.........................................................................................................
   stderr_pipeline.push stderr
   stderr_pipeline.push @$split()
-  # stderr_pipeline.push PS.async_map ( data, handler ) -> defer -> handler null, data
+  # stderr_pipeline.push @async_map ( data, handler ) -> defer -> handler null, data
   stderr_pipeline.push @map ( line ) -> [ 'stderr', line, ]
   #.........................................................................................................
   ### Event handling: collect all events from child process ###
-  do =>
-    signal_buffer = []
-    cp.on 'disconnect',                   -> signal_buffer.push [ 'disconnect',  null,          ]
-    cp.on 'error',      ( error )         -> signal_buffer.push [ 'error',       error ? null,  ]
-    cp.on 'exit',       ( code, signal )  =>
-      code = ( 128 + ( @_spawn._signals_and_codes[ signal ] ? 0 ) ) if signal? and not code?
-      signal_buffer.push [ 'exit',   { code, signal, },  ]
-      # signal_buffer.push [ 'code',     code,             ] if code?
-      # signal_buffer.push [ 'signal',         signal,     ] if signal?
-    #.......................................................................................................
-    ### The 'close' event should always come last, so we use that to trigger asynchronous sending of
-    all events collected in the signal buffer. See https://github.com/dominictarr/pull-cont ###
-    signal_pipeline.push pull_cont ( handler ) ->
-      cp.on 'close', ->
-        # signal_buffer.push [ 'close', null, ]
-        handler null, PS.new_value_source signal_buffer
+  cp.on 'disconnect',                   => event_buffer.push [ 'disconnect',  null,          ]
+  cp.on 'error',      ( error )         => event_buffer.push [ 'error',       error ? null,  ]
+  cp.on 'exit',       ( code, signal )  =>
+    code = ( 128 + ( @_spawn._signals_and_codes[ signal ] ? 0 ) ) if signal? and not code?
+    event_buffer.push [ 'exit',   { code, signal, },  ]
+  #.......................................................................................................
+  ### The 'close' event should always come last, so we use that to trigger asynchronous sending of
+  all events collected in the signal buffer. See https://github.com/dominictarr/pull-cont ###
+  event_pipeline.push pull_cont ( handler ) =>
+    cp.on 'close', =>
+      handler null, @new_value_source event_buffer
+      return null
   #.........................................................................................................
   ### Since reading from a spawned process is inherently asynchronous, we cannot be sure all of the output
   from stdout and stderr has been sent down the pipeline before events from the child process arrive.
   Therefore, we have to buffer those events and send them on only when the confluence stream has indicated
   exhaustion: ###
-  $ensure_event_order = ->
+  $ensure_event_order = =>
     cp_buffer     = []
     std_buffer    = []
     command_sent  = no
-    return $ 'null', ( event, send ) ->
+    return @$ 'null', ( event, send ) =>
       if event?
         [ category, ] = event
         ### Events from stdout and stderr are buffered until the command event has been sent; after that,
@@ -666,17 +674,18 @@ this._map_errors = function (mapper) {
       else
         ### Send all buffered CP events: ###
         send cp_buffer.shift() while cp_buffer.length > 0
+      return null
   #.........................................................................................................
   confluence = pull_many [
-    ( pull PS.new_value_source [ [ 'command', command, ] ] )
-    ( pull stdout_pipeline...   )
-    ( pull stderr_pipeline...   )
-    ( pull signal_pipeline...  )
+    ( pull command_source     )
+    ( pull stdout_pipeline... )
+    ( pull stderr_pipeline... )
+    ( pull event_pipeline...  )
     ]
   #.........................................................................................................
-  spawn_pipeline.push confluence
-  spawn_pipeline.push $ensure_event_order()
-  source = pull spawn_pipeline...
+  funnel.push confluence
+  funnel.push $ensure_event_order()
+  source = pull funnel...
   return [ cp, source, ]
 
 #-----------------------------------------------------------------------------------------------------------
