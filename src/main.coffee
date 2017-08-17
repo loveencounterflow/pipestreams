@@ -44,9 +44,13 @@ pull                      = require 'pull-stream'
 map                       = pull.map.bind pull
 pull_through              = require 'pull-through'
 pull_async_map            = require 'pull-stream/throughs/async-map'
+pull_many                 = require 'pull-many'
+pull_cont                 = require 'pull-cont'
+# pull_infinite             = require 'pull-stream/sources/infinite'
 Event_emitter             = require 'eventemitter3'
 #...........................................................................................................
 return_id                 = ( x ) -> x
+# { step, }                 = CND.suspend
 
 
 #===========================================================================================================
@@ -583,15 +587,12 @@ this._map_errors = function (mapper) {
 
 
 #===========================================================================================================
-#
+# SPAWN
 #-----------------------------------------------------------------------------------------------------------
-@spawn = ( P... ) -> ( @spawn_with_cp_and_source P... )[ 1 ]
+@spawn = ( P... ) -> ( @_spawn P... )[ 1 ]
 
 #-----------------------------------------------------------------------------------------------------------
-@spawn_with_cp_and_source = ( command, settings ) ->
-  ### Ecept for the error handler `{ on_error: ( error ) -> ... }`, all attributes of `settings` will be
-  passed on to NodeJS's `child_process.spawn`. ###
-  ### TAINT must also consider exit code other than zero ###
+@_spawn = ( command, settings ) ->
   #.........................................................................................................
   switch arity = arguments.length
     when 1, 2 then null
@@ -602,75 +603,94 @@ this._map_errors = function (mapper) {
   cp                = CP.spawn command, settings
   #.........................................................................................................
   stdout            = STPS.source cp.stdout
-  stdout_pipeline   = []
-  #.........................................................................................................
   stderr            = STPS.source cp.stderr
+  #.........................................................................................................
+  stdout_pipeline   = []
   stderr_pipeline   = []
+  spawn_pipeline    = []
+  signal_pipeline   = []
+  #.........................................................................................................
+  stdout_pipeline.push stdout
+  ### TAINT make `$split()` optional ###
+  stdout_pipeline.push @$split()
+  # stdout_pipeline.push PS.async_map ( data, handler ) -> defer -> handler null, data
+  stdout_pipeline.push @map ( line ) -> [ 'stdout', line, ]
   #.........................................................................................................
   stderr_pipeline.push stderr
   stderr_pipeline.push @$split()
-  stderr_pipeline.push @$collect()
-  stderr_pipeline.push @$ 'null', ( lines, send ) ->
-    send lines
-    if lines? and lines.length > 0
-      error = new Error lines.join '\n'
-      return on_error error if on_error?
-      throw error
-    return null
-  stderr_pipeline.push @$drain()
-  pull stderr_pipeline...
+  # stderr_pipeline.push PS.async_map ( data, handler ) -> defer -> handler null, data
+  stderr_pipeline.push @map ( line ) -> [ 'stderr', line, ]
   #.........................................................................................................
-  stdout_pipeline.push stdout
-  # stdout_pipeline.push @$watch ( data ) -> whisper '22827', rpr data
+  ### Event handling: collect all events from child process ###
+  do =>
+    signal_buffer = []
+    cp.on 'disconnect',                   -> signal_buffer.push [ 'disconnect',  null,          ]
+    cp.on 'error',      ( error )         -> signal_buffer.push [ 'error',       error ? null,  ]
+    cp.on 'exit',       ( code, signal )  =>
+      code = ( 128 + ( @_spawn._signals_and_codes[ signal ] ? 0 ) ) if signal? and not code?
+      signal_buffer.push [ 'exit',   { code, signal, },  ]
+      # signal_buffer.push [ 'code',     code,             ] if code?
+      # signal_buffer.push [ 'signal',         signal,     ] if signal?
+    #.......................................................................................................
+    ### The 'close' event should always come last, so we use that to trigger asynchronous sending of
+    all events collected in the signal buffer. See https://github.com/dominictarr/pull-cont ###
+    signal_pipeline.push pull_cont ( handler ) ->
+      cp.on 'close', ->
+        # signal_buffer.push [ 'close', null, ]
+        handler null, PS.new_value_source signal_buffer
   #.........................................................................................................
-  source = pull stdout_pipeline...
+  ### Since reading from a spawned process is inherently asynchronous, we cannot be sure all of the output
+  from stdout and stderr has been sent down the pipeline before events from the child process arrive.
+  Therefore, we have to buffer those events and send them on only when the confluence stream has indicated
+  exhaustion: ###
+  $ensure_event_order = ->
+    cp_buffer     = []
+    std_buffer    = []
+    command_sent  = no
+    return $ 'null', ( event, send ) ->
+      if event?
+        [ category, ] = event
+        ### Events from stdout and stderr are buffered until the command event has been sent; after that,
+        they are sent immediately: ###
+        if category in [ 'stdout', 'stderr', ]
+          return send event if command_sent
+          return std_buffer.push event
+        ### The command event is sent right away; any buffered stdout, stderr events are flushed: ###
+        if category is 'command'
+          command_sent = yes
+          send event
+          send std_buffer.shift() while std_buffer.length > 0
+          return
+        ### Keep everything else (i.e. events from child process) for later: ###
+        cp_buffer.push event
+      else
+        ### Send all buffered CP events: ###
+        send cp_buffer.shift() while cp_buffer.length > 0
+  #.........................................................................................................
+  confluence = pull_many [
+    ( pull PS.new_value_source [ [ 'command', command, ] ] )
+    ( pull stdout_pipeline...   )
+    ( pull stderr_pipeline...   )
+    ( pull signal_pipeline...  )
+    ]
+  #.........................................................................................................
+  spawn_pipeline.push confluence
+  spawn_pipeline.push $ensure_event_order()
+  source = pull spawn_pipeline...
   return [ cp, source, ]
+
+#-----------------------------------------------------------------------------------------------------------
+@_spawn._signals_and_codes = {
+  SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGILL: 4, SIGTRAP: 5, SIGABRT: 6, SIGIOT: 6, SIGBUS: 7, SIGFPE: 8,
+  SIGKILL: 9, SIGUSR1: 10, SIGSEGV: 11, SIGUSR2: 12, SIGPIPE: 13, SIGALRM: 14, SIGTERM: 15, SIGSTKFLT: 16,
+  SIGCHLD: 17, SIGCONT: 18, SIGSTOP: 19, SIGTSTP: 20, SIGTTIN: 21, SIGTTOU: 22, SIGURG: 23, SIGXCPU: 24,
+  SIGXFSZ: 25, SIGVTALRM: 26, SIGPROF: 27, SIGWINCH: 28, SIGIO: 29, SIGPOLL: 29, SIGPWR: 30, SIGSYS: 31, }
 
 
 #===========================================================================================================
 # SAMPLING / THINNING OUT
 #-----------------------------------------------------------------------------------------------------------
 @$sample = ( p = 0.5, options ) ->
-  ### Given a `0 <= p <= 1`, interpret `p` as the *p*robability to *p*ick a given record and otherwise toss
-  it, so that `$sample 1` will keep all records, `$sample 0` will toss all records, and
-  `$sample 0.5` (the default) will toss (on average) every other record.
-
-  You can pipe several `$sample()` calls, reducing the data stream to 50% with each step. If you know
-  your data set has, say, 1000 records, you can cut down to a random sample of 10 by piping the result of
-  calling `$sample 1 / 1000 * 10` (or, of course, `$sample 0.01`).
-
-  Tests have shown that a data file with 3'722'578 records (which didn't even fit into memory when parsed)
-  could be perused in a matter of seconds with `$sample 1 / 1e4`, delivering a sample of around 370
-  records. Because these records are randomly selected and because the process is so immensely sped up, it
-  becomes possible to develop regular data processing as well as coping strategies for data-overload
-  symptoms with much more ease as compared to a situation where small but realistic data sets are not
-  available or have to be produced in an ad-hoc, non-random manner.
-
-  **Parsing CSV**: There is a slight complication when your data is in a CSV-like format: in that case,
-  there is, with `0 < p < 1`, a certain chance that the *first* line of a file is tossed, but some
-  subsequent lines are kept. If you start to transform the text line into objects with named values later in
-  the pipe (which makes sense, because you will typically want to thin out largeish streams as early on as
-  feasible), the first line kept will be mis-interpreted as a header line (which must come first in CSV
-  files) and cause all subsequent records to become weirdly malformed. To safeguard against this, use
-  `$sample p, headers: true` (JS: `$sample( p, { headers: true } )`) in your code.
-
-  **Predictable Samples**: Sometimes it is important to have randomly selected data where samples are
-  constant across multiple runs:
-
-  * once you have seen that a certain record appears on the screen log, you are certain it will be in the
-    database, so you can write a snippet to check for this specific one;
-
-  * you have implemented a new feature you want to test with an arbitrary subset of your data. You're
-    still tweaking some parameters and want to see how those affect output and performance. A random
-    sample that is different on each run would be a problem because the number of records and the sheer
-    bytecount of the data may differ from run to run, so you wouldn't be sure which effects are due to
-    which causes.
-
-  To obtain predictable samples, use `$sample p, seed: 1234` (with a non-zero number of your choice);
-  you will then get the exact same
-  sample whenever you re-run your piping application with the same stream and the same seed. An interesting
-  property of the predictable sample is that—everything else being the same—a sample with a smaller `p`
-  will always be a subset of a sample with a bigger `p` and vice versa. ###
   #.........................................................................................................
   unless 0 <= p <= 1
     throw new Error "expected a number between 0 and 1, got #{rpr p}"
