@@ -1,4 +1,5 @@
 
+🌜**Work in progress; usable, but documentation is fragmentary**🌛
 
 
 # PipeStreams
