@@ -23,7 +23,7 @@ PS                        = require '../..'
 { $, $async, }            = PS
 #...........................................................................................................
 
-
+###
 #-----------------------------------------------------------------------------------------------------------
 TAP.test "spawn 1", ( T ) ->
   # new_pushable              = require 'pull-pushable'
@@ -48,43 +48,50 @@ TAP.test "spawn 1", ( T ) ->
   #.........................................................................................................
   PS.pull pipeline...
   return null
+###
 
 #-----------------------------------------------------------------------------------------------------------
-###
-@remote_spawn = ( node, handler ) ->
-  step @, ( resume ) ->
-    yield defer resume
-    # debug '20991', node
-    on_stop = PS.new_event_collector 'stop', ->
-      help 'stopped'
-      handler()
-    command = 'xxx ; echo "helo" && exit 1'
-    command = 'xxx ; echo "helo" && exit 0'
-    command = 'xxx ; echo "helo"'
-    command = 'xxx && echo "helo"'
-    # command = 'exit 111'
-    # command = 'ls && echo_to_stderr() { cat <<< "$@" 1>&2; }; echo_to_stderr what'
-    # command = '( >&2 echo "error" )'
-    command = 'echo_to_stderr() { cat <<< "$@" 1>&2; }; echo_to_stderr what; echo else; sleep 1; kill -9 $$'
-    command = 'kill -2 $$'
-    command = 'exit 130'
-    command = 'bonkers'
-    command = 'bonkers 2>&1; exit 0'
-    command = 'bonkers; echo "success!"; exit 0'
-    command = 'bonkers; echo "success!"; kill -27 $$'
-    source  = PS.spawn command, resume
-    pipeline        = []
-    pipeline.push source
-    pipeline.push PS.$show()
-    pipeline.push PS.$watch ( [ key, value, ] ) ->
-      switch key
-        when 'command'  then  urge    rpr value
-        when 'stdout'   then  help    rpr value
-        when 'stderr'   then  warn    rpr value
-        else                  info    rpr value
-      return null
-    pipeline.push on_stop.add PS.$drain()
-    PS.pull pipeline...
-    return null
+TAP.test "spawn 2", ( T ) ->
+  probes_and_matchers = [
+    [ 'xxx ; echo "helo" && exit 1', ]
+    [ 'xxx ; echo "helo" && exit 0', ]
+    [ 'xxx ; echo "helo"', ]
+    [ 'xxx && echo "helo"', ]
+    [ 'exit 111', ]
+    [ 'ls && echo_to_stderr() { cat <<< "$@" 1>&2; }; echo_to_stderr what', ]
+    [ '( >&2 echo "error" )', ]
+    [ 'echo_to_stderr() { cat <<< "$@" 1>&2; }; echo_to_stderr what; echo else; sleep 1; kill -9 $$', ]
+    [ 'kill -2 $$', ]
+    [ 'exit 130', ]
+    [ 'bonkers', ]
+    [ 'bonkers 2>&1; exit 0', ]
+    [ 'bonkers; echo "success!"; exit 0', ]
+    [ 'bonkers; echo "success!"; kill -27 $$', ]
+    ]
+  #.........................................................................................................
+  tasks = []
+  next  = ->
+    help 'stopped'
+    tasks.shift()
+    return T.end() if tasks.length is 0
+    tasks[ 0 ]()
+  #.........................................................................................................
+  for [ command, ], idx in probes_and_matchers
+    do ( command, idx ) ->
+      tasks.push ->
+        on_stop = PS.new_event_collector 'stop', ->
+          # help "task #{idx} stopped"
+          # next()
+        source    = PS.spawn command
+        pipeline  = []
+        pipeline.push source
+        pipeline.push PS.$collect()
+        pipeline.push PS.$show()
+        pipeline.push on_stop.add PS.$drain()
+        PS.pull pipeline...
+  #.........................................................................................................
+  # tasks[ 0  ]() for _ in [ 0 .. 10 ]
+  tasks[ 13 ]() for _ in [ 0 .. 10 ]
   return null
-###
+
+
