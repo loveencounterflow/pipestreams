@@ -595,6 +595,33 @@ this._map_errors = function (mapper) {
 #===========================================================================================================
 # SPAWN
 #-----------------------------------------------------------------------------------------------------------
+@spawn_collect = ( P..., handler ) ->
+  #.........................................................................................................
+  $on_data = =>
+    command   = null
+    stderr    = []
+    stdout    = []
+    return @$watch ( event ) =>
+      [ key, value, ] = event
+      switch key
+        when 'command'  then  command = value
+        when 'stdout'   then  stdout.push value
+        when 'stderr'   then  stderr.push value
+        when 'exit'     then  return handler null, Object.assign { command, stdout, stderr, }, value
+        else throw new Error "internal error 2201991"
+      return null
+  #.........................................................................................................
+  source    = @spawn P...
+  pipeline  = []
+  #.........................................................................................................
+  pipeline.push source
+  pipeline.push $on_data()
+  pipeline.push @$drain()
+  #.........................................................................................................
+  pull pipeline...
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
 @spawn = ( P... ) -> ( @_spawn P... )[ 1 ]
 
 #-----------------------------------------------------------------------------------------------------------
@@ -611,6 +638,8 @@ this._map_errors = function (mapper) {
   #.........................................................................................................
   settings          = Object.assign { shell, }, settings
   stdout_is_binary  = pluck settings, 'binary',         no
+  # throw new Error "deprecated setting: error_to_exit" if ( pluck settings, 'error_to_exit',  null )?
+  # stderr_target     = pluck settings, 'stderr', 'stderr'
   error_to_exit     = pluck settings, 'error_to_exit',  no
   command_source    = @new_value_source [ [ 'command', command, ] ]
   cp                = CP.spawn command, settings

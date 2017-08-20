@@ -24,6 +24,8 @@ PS                        = require '../..'
 { $, $async, }            = PS
 #...........................................................................................................
 jr                        = JSON.stringify
+{ step, }                 = require 'coffeenode-suspend'
+
 
 #-----------------------------------------------------------------------------------------------------------
 TAP.test "spawn 1", ( T ) ->
@@ -183,5 +185,40 @@ TAP.test "spawn 3", ( T ) ->
   tasks[ 0 ]()
   # tasks[ 13 ]()
   return null
+
+
+#-----------------------------------------------------------------------------------------------------------
+TAP.test "spawn_collect 1", ( T ) ->
+  probes_and_matchers = [
+    ["bonkers; echo \"success!\"; kill -27 $$",{"command":"bonkers; echo \"success!\"; kill -27 $$","stdout":["success!"],"stderr":["/bin/sh: bonkers: command not found"],"code":155,"signal":"SIGPROF"}]
+    ["echo \"success!\"; kill -27 $$",{"command":"echo \"success!\"; kill -27 $$","stdout":["success!"],"stderr":[],"code":155,"signal":"SIGPROF"}]
+    ["echo \"success!\"; exit 1",{"command":"echo \"success!\"; exit 1","stdout":["success!"],"stderr":[],"code":1,"signal":null}]
+    ["echo \"success!\"; bonkers",{"command":"echo \"success!\"; bonkers","stdout":["success!"],"stderr":["/bin/sh: bonkers: command not found"],"code":127,"signal":null}]
+    ["1>&2 echo 'problem!'",{"command":"1>&2 echo 'problem!'","stdout":[],"stderr":["problem!"],"code":0,"signal":null}]
+    ]
+  #.........................................................................................................
+  tasks = []
+  next  = ->
+    tasks.shift()
+    return T.end() if tasks.length is 0
+    tasks[ 0 ]()
+    # tasks[ 13 ]()
+  #.........................................................................................................
+  for probe_and_matcher in probes_and_matchers
+    do ( probe_and_matcher ) ->
+      [ probe, matcher, ] = probe_and_matcher
+      tasks.push ->
+        #...................................................................................................
+        step ( resume ) ->
+          #.................................................................................................
+          result = yield PS.spawn_collect probe, resume
+          T.ok ( CND.equals result, matcher ), "result and matcher"
+          # urge jr [ probe, result, ]
+          next()
+  #.........................................................................................................
+  tasks[ 0 ]()
+  # tasks[ 13 ]()
+  return null
+
 
 
