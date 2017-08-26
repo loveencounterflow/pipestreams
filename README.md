@@ -51,9 +51,36 @@ PipeStreams `spawn` returns a single in the form of a pull stream source; this i
 'truth' when it comes to handling success or failure (or, indeed, both, as they can co-occur in complex
 shell commands). That source provides the following characteristics and guarantees:
 
-* `spawn` is initiated with a command *string* or a command *list*; in the former case, a shell is
-  started (`/bin/sh`) which will take care of argument parsing, while in the latter case, command and
-  arguments must already be appropriately sliced, and no shell will be invoked.
+* `spawn` is initiated with a command *string* or a command *list*; in both cases, a shell is started
+  (`/bin/sh`).
+
+* Use of the shell may be explicitly disabled by passing in `{ shell: false, }` as optional 2nd argument to
+  `PS.spawn`. Also, as with NodeJS `child_process.spawn`, a custom command may be given to replace `/bun/sh`
+  with another executable.
+
+* Note that the outcome of a failing command will differ significantly depending on whether a shell was
+  invoked or not. The difference is due to the fact that executing even a bogus command *with* a shell will
+  generally succeed insofar as the execution of the shell *itself* is concerned (i.e. `/bin/sh` will almost
+  never lead to an `ENOENT` condition). Once that first level of indirection has succeeded, it is the shell,
+  not the OS that produces eventual error messages, and the way it does that is by printing to `stderr` and
+  setting an exit code&nbps;≠&nbps;0. For ease-of-use it is probably best to stick to either always or else
+  never using the shell. The reason `{ shell: true, }` has been made the default is that on modern systems
+  it should incur only a minimal overhead while providing the more general and more flexible mechanism way
+  to do things.
+
+* Shell error handling is a beast, what with poorely documented OS error codes, bash exit codes that totally
+  differ from those even when they *mean* the same (OS: #2 `ENOENT` == Bash #127 `command not found`),
+  signal names that are associated with numbers in that *very same small namespace* of small non-negative
+  integers, and userland programs that exit with whatever codes they see fit (e.g. `getopt --test; echo $?`
+  gives you `4` to indicate *success* <strike>WTF</strike>FTW). It's a mess. As an experimental feature,
+  `PS.spawn` supplies an 'exit comment', that is, a short informative, standardized text to go
+  with the `exit` event (as `event.comment`). It is currently directly derived from the exit code (and is
+  the same whether `shell` was set or not, though that may change). You can supply your own command-specific
+  codes; those will be looked up first when commenting on exit (e.g. use `{ comments: { 1: 'wrong port', 33:
+  'host unreachable', error: 'an error has occurred', } }` to add comments for exit codes 1, and 33 and set
+  the default error comment, which itself defaults to `'error'`). When a signal has been detected and a
+  comment has not been set otherwise, then the comment is set to the name of the signal; thus, users will be
+  able to do a lot of error checking merely by looking at the `comment` property of the `exit` event.
 
 * The method returns a pull streams source. The events that come down the source will all be `[ key,
   value, ]` pairs (also known as 'facets').

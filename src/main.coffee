@@ -631,18 +631,22 @@ this._map_errors = function (mapper) {
     when 1, 2 then null
     else throw new Error "expected 1 or 2 arguments, got #{arity}"
   #.........................................................................................................
-  switch type = CND.type_of command
-    when 'text'   then shell = yes
-    when 'list'   then shell = no
-    else throw new Error "expected a text or list for command, got a #{type}"
-  #.........................................................................................................
-  settings          = Object.assign { shell, }, settings
-  stdout_is_binary  = pluck settings, 'binary',         no
   # throw new Error "deprecated setting: error_to_exit" if ( pluck settings, 'error_to_exit',  null )?
   # stderr_target     = pluck settings, 'stderr', 'stderr'
+  settings          = Object.assign { shell: yes, }, settings
+  stdout_is_binary  = pluck settings, 'binary',         no
+  comments          = pluck settings, 'comments',       {}
   error_to_exit     = pluck settings, 'error_to_exit',  no
   command_source    = @new_value_source [ [ 'command', command, ] ]
-  cp                = CP.spawn command, settings
+  #.........................................................................................................
+  switch command_type = CND.type_of command
+    when 'text'
+      cp = CP.spawn command, settings
+    when 'list'
+      unless command.length > 0
+        throw new Error "expected a list with at least one value, got #{rpr command}"
+      cp = CP.spawn command[ 0 ], command[ 1 .. ], settings
+    else throw new Error "expected a text or a list for command, got #{command_type}"
   #.........................................................................................................
   stdout            = STPS.source cp.stdout
   stderr            = STPS.source cp.stderr
@@ -665,10 +669,13 @@ this._map_errors = function (mapper) {
   #.........................................................................................................
   ### Event handling: collect all events from child process ###
   cp.on 'disconnect',                   => event_buffer.push [ 'disconnect',  null,          ]
+  ### TAINT exit and error events should use same method to do post-processing ###
   cp.on 'error',      ( error )         => event_buffer.push [ 'error',       error ? null,  ]
   cp.on 'exit',       ( code, signal )  =>
-    code = ( 128 + ( @_spawn._signals_and_codes[ signal ] ? 0 ) ) if signal? and not code?
-    event_buffer.push [ 'exit',   { code, signal, },  ]
+    code      = ( 128 + ( @_spawn._signals_and_codes[ signal ] ? 0 ) ) if signal? and not code?
+    comment   = comments[ code ] ? @_spawn._codes_and_comments[ code ] ? signal
+    comment  ?= if code is 0 then 'ok' else comments[ 'error' ] ? 'error'
+    event_buffer.push [ 'exit',   { code, signal, comment, },  ]
   #.......................................................................................................
   ### The 'close' event should always come last, so we use that to trigger asynchronous sending of
   all events collected in the signal buffer. See https://github.com/dominictarr/pull-cont ###
@@ -740,6 +747,12 @@ this._map_errors = function (mapper) {
   SIGKILL: 9, SIGUSR1: 10, SIGSEGV: 11, SIGUSR2: 12, SIGPIPE: 13, SIGALRM: 14, SIGTERM: 15, SIGSTKFLT: 16,
   SIGCHLD: 17, SIGCONT: 18, SIGSTOP: 19, SIGTSTP: 20, SIGTTIN: 21, SIGTTOU: 22, SIGURG: 23, SIGXCPU: 24,
   SIGXFSZ: 25, SIGVTALRM: 26, SIGPROF: 27, SIGWINCH: 28, SIGIO: 29, SIGPOLL: 29, SIGPWR: 30, SIGSYS: 31, }
+
+#-----------------------------------------------------------------------------------------------------------
+@_spawn._codes_and_comments =
+  # 1:      'an error has occurred'
+  126:    'permission denied'
+  127:    'command not found'
 
 
 #===========================================================================================================
