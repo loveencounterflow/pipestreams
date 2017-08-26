@@ -1,6 +1,6 @@
 {
   "name": "pipestreams",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "experimental streaming",
   "main": "lib/main.js",
   "scripts": {
