@@ -700,16 +700,14 @@ this._map_errors = function (mapper) {
         they are sent immediately: ###
         if category in [ 'stdout', 'stderr', ]
           if command_sent
-            on_data event if on_data?
-            return send event
+            return ( if on_data? then on_data else send ) event
           return std_buffer.push event
         ### The command event is sent right away; any buffered stdout, stderr events are flushed: ###
         if category is 'command'
           command_sent = yes
           send event
           while std_buffer.length > 0
-            on_data std_buffer[ 0 ] if on_data?
-            send std_buffer.shift()
+            ( if on_data? then on_data else send ) std_buffer.shift()
           return
         ### Keep everything else (i.e. events from child process) for later: ###
         cp_buffer.push event

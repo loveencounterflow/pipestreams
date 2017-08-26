@@ -227,11 +227,11 @@ TAP.test "spawn_collect 1", ( T ) ->
 #-----------------------------------------------------------------------------------------------------------
 TAP.test "spawn_collect with data callback", ( T ) ->
   probes_and_matchers = [
-    ["bonkers; echo \"success!\"; kill -27 $$",{"command":"bonkers; echo \"success!\"; kill -27 $$","stdout":["success!"],"stderr":["/bin/sh: bonkers: command not found"],"code":155,"signal":"SIGPROF","comment":"SIGPROF"},[["stderr","/bin/sh: bonkers: command not found"],["stdout","success!"]]]
-    ["echo \"success!\"; kill -27 $$",{"command":"echo \"success!\"; kill -27 $$","stdout":["success!"],"stderr":[],"code":155,"signal":"SIGPROF","comment":"SIGPROF"},[["stdout","success!"]]]
-    ["echo \"success!\"; exit 1",{"command":"echo \"success!\"; exit 1","stdout":["success!"],"stderr":[],"code":1,"signal":null,"comment":"error"},[["stdout","success!"]]]
-    ["echo \"success!\"; bonkers",{"command":"echo \"success!\"; bonkers","stdout":["success!"],"stderr":["/bin/sh: bonkers: command not found"],"code":127,"signal":null,"comment":"command not found"},[["stderr","/bin/sh: bonkers: command not found"],["stdout","success!"]]]
-    ["1>&2 echo 'problem!'",{"command":"1>&2 echo 'problem!'","stdout":[],"stderr":["problem!"],"code":0,"signal":null,"comment":"ok"},[["stderr","problem!"]]]
+    ["bonkers; echo \"success!\"; kill -27 $$",{"command":"bonkers; echo \"success!\"; kill -27 $$","stdout":[],"stderr":[],"code":155,"signal":"SIGPROF","comment":"SIGPROF"},[["stderr","/bin/sh: bonkers: command not found"],["stdout","success!"]]]
+    ["echo \"success!\"; kill -27 $$",{"command":"echo \"success!\"; kill -27 $$","stdout":[],"stderr":[],"code":155,"signal":"SIGPROF","comment":"SIGPROF"},[["stdout","success!"]]]
+    ["echo \"success!\"; exit 1",{"command":"echo \"success!\"; exit 1","stdout":[],"stderr":[],"code":1,"signal":null,"comment":"error"},[["stdout","success!"]]]
+    ["echo \"success!\"; bonkers",{"command":"echo \"success!\"; bonkers","stdout":[],"stderr":[],"code":127,"signal":null,"comment":"command not found"},[["stderr","/bin/sh: bonkers: command not found"],["stdout","success!"]]]
+    ["1>&2 echo 'problem!'",{"command":"1>&2 echo 'problem!'","stdout":[],"stderr":[],"code":0,"signal":null,"comment":"ok"},[["stderr","problem!"]]]
     ]
   #.........................................................................................................
   tasks = []
