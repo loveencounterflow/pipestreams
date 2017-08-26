@@ -191,7 +191,6 @@ TAP.test "spawn 3", ( T ) ->
   # tasks[ 13 ]()
   return null
 
-
 #-----------------------------------------------------------------------------------------------------------
 TAP.test "spawn_collect 1", ( T ) ->
   probes_and_matchers = [
@@ -223,6 +222,41 @@ TAP.test "spawn_collect 1", ( T ) ->
   #.........................................................................................................
   tasks[ 0 ]()
   # tasks[ 13 ]()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+TAP.test "spawn_collect with data callback", ( T ) ->
+  probes_and_matchers = [
+    ["bonkers; echo \"success!\"; kill -27 $$",{"command":"bonkers; echo \"success!\"; kill -27 $$","stdout":["success!"],"stderr":["/bin/sh: bonkers: command not found"],"code":155,"signal":"SIGPROF","comment":"SIGPROF"},[["stderr","/bin/sh: bonkers: command not found"],["stdout","success!"]]]
+    ["echo \"success!\"; kill -27 $$",{"command":"echo \"success!\"; kill -27 $$","stdout":["success!"],"stderr":[],"code":155,"signal":"SIGPROF","comment":"SIGPROF"},[["stdout","success!"]]]
+    ["echo \"success!\"; exit 1",{"command":"echo \"success!\"; exit 1","stdout":["success!"],"stderr":[],"code":1,"signal":null,"comment":"error"},[["stdout","success!"]]]
+    ["echo \"success!\"; bonkers",{"command":"echo \"success!\"; bonkers","stdout":["success!"],"stderr":["/bin/sh: bonkers: command not found"],"code":127,"signal":null,"comment":"command not found"},[["stderr","/bin/sh: bonkers: command not found"],["stdout","success!"]]]
+    ["1>&2 echo 'problem!'",{"command":"1>&2 echo 'problem!'","stdout":[],"stderr":["problem!"],"code":0,"signal":null,"comment":"ok"},[["stderr","problem!"]]]
+    ]
+  #.........................................................................................................
+  tasks = []
+  next  = ->
+    return T.end() if tasks.length < 1
+    tasks.shift()()
+  #.........................................................................................................
+  for probe_and_matcher in probes_and_matchers
+    do ( probe_and_matcher ) ->
+      [ probe, reply_matcher, events_matcher, ] = probe_and_matcher
+      tasks.push ->
+        #...................................................................................................
+        # echo '---------------------------------------------------------------------------'
+        step ( resume ) ->
+          events = []
+          on_data = ( event ) -> events.push event
+          reply   = yield PS.spawn_collect probe, { on_data, }, resume
+          events.sort()
+          T.ok ( CND.equals reply,  reply_matcher   ), "reply and reply_matcher"
+          T.ok ( CND.equals events, events_matcher  ), "events and events_matcher"
+          # urge jr [ probe, reply, events, ]
+          next()
+  #.........................................................................................................
+  next()
+  # tasks[ 0 ]()
   return null
 
 

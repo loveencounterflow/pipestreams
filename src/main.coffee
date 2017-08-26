@@ -636,6 +636,7 @@ this._map_errors = function (mapper) {
   settings          = Object.assign { shell: yes, }, settings
   stdout_is_binary  = pluck settings, 'binary',         no
   comments          = pluck settings, 'comments',       {}
+  on_data           = pluck settings, 'on_data',        null
   error_to_exit     = pluck settings, 'error_to_exit',  no
   command_source    = @new_value_source [ [ 'command', command, ] ]
   #.........................................................................................................
@@ -698,13 +699,17 @@ this._map_errors = function (mapper) {
         ### Events from stdout and stderr are buffered until the command event has been sent; after that,
         they are sent immediately: ###
         if category in [ 'stdout', 'stderr', ]
-          return send event if command_sent
+          if command_sent
+            on_data event if on_data?
+            return send event
           return std_buffer.push event
         ### The command event is sent right away; any buffered stdout, stderr events are flushed: ###
         if category is 'command'
           command_sent = yes
           send event
-          send std_buffer.shift() while std_buffer.length > 0
+          while std_buffer.length > 0
+            on_data std_buffer[ 0 ] if on_data?
+            send std_buffer.shift()
           return
         ### Keep everything else (i.e. events from child process) for later: ###
         cp_buffer.push event

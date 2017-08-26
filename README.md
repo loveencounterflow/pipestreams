@@ -164,6 +164,10 @@ underlying NodeJS `child_process.spawn` method **except** for
   facilitate error handling in a lot of cases where exit codes and / or messages sent to `stderr` indicate
   problems with a command.
 
+* `on_data`—a callback to be called soon as `[ 'stdout', data, ]` or `[ 'stderr', data, ]` events have
+  transpired. This is handy especially when using `spawn_collect`, as you can then process e.g. progress
+  messages from your command just-in-time and still leave exit handling to the 'main' callback function.
+
 The other settings are as follows (text copied from
 [the NodeJS docs](https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options)):
 
