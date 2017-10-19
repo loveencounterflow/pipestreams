@@ -41,7 +41,7 @@ $take                     = require 'pull-stream/throughs/take'
 $stringify                = require 'pull-stringify'
 $values                   = require 'pull-stream/sources/values'
 pull                      = require 'pull-stream'
-map                       = pull.map.bind pull
+# map                       = pull.map.bind pull
 pull_through              = require 'pull-through'
 pull_async_map            = require 'pull-stream/throughs/async-map'
 pull_many                 = require 'pull-many'
@@ -276,7 +276,7 @@ this._map_errors = function (mapper) {
     when 1 then null
     else throw new Error "method arity #{arity} not implemented"
   #.........................................................................................................
-  return map method
+  return @_map_errors method
 
 #-----------------------------------------------------------------------------------------------------------
 @$ = @remit = ( hint, method ) ->
