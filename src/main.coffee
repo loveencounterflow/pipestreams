@@ -665,6 +665,7 @@ this._map_errors = function (mapper) {
   #.........................................................................................................
   stderr_pipeline.push stderr
   stderr_pipeline.push @$split()
+  # stderr_pipeline.push @$show title: '**44321**'
   # stderr_pipeline.push @async_map ( data, handler ) -> defer -> handler null, data
   stderr_pipeline.push @map ( line ) -> [ 'stderr', line, ]
   #.........................................................................................................
@@ -699,21 +700,24 @@ this._map_errors = function (mapper) {
         ### Events from stdout and stderr are buffered until the command event has been sent; after that,
         they are sent immediately: ###
         if category in [ 'stdout', 'stderr', ]
+          # debug '10921>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', command_sent, std_buffer
+          # send [ 'stderr', '!!!!!!!!!!!!!!!', ]
           if command_sent
-            return ( if on_data? then on_data else send ) event
+            return if on_data? then on_data event else send event
           return std_buffer.push event
         ### The command event is sent right away; any buffered stdout, stderr events are flushed: ###
         if category is 'command'
           command_sent = yes
           send event
           while std_buffer.length > 0
-            ( if on_data? then on_data else send ) std_buffer.shift()
+            if on_data? then on_data std_buffer.shift() else send std_buffer.shift()
           return
         ### Keep everything else (i.e. events from child process) for later: ###
         cp_buffer.push event
       else
         ### Send all buffered CP events: ###
         send cp_buffer.shift() while cp_buffer.length > 0
+        # if on_data? then on_data std_buffer.shift() else send std_buffer.shift()
       return null
   #.........................................................................................................
   confluence = pull_many [
@@ -725,6 +729,7 @@ this._map_errors = function (mapper) {
   #.........................................................................................................
   funnel.push confluence
   funnel.push $ensure_event_order()
+  # funnel.push @$show title: '**21129**'
   #.........................................................................................................
   if error_to_exit
     funnel.push do =>
