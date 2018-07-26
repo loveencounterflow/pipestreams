@@ -28,14 +28,14 @@
   "dependencies": {
     "cnd": "^4.3.1",
     "coffeenode-suspend": "^0.1.11",
-    "eventemitter3": "^2.0.3",
+    "eventemitter3": "^3.1.0",
     "numeral": "^2.0.6",
     "pull-cont": "^0.1.1",
-    "pull-file": "^1.0.0",
+    "pull-file": "^1.1.0",
     "pull-many": "^1.0.8",
-    "pull-pushable": "^2.1.1",
+    "pull-pushable": "^2.2.0",
     "pull-split": "^0.2.0",
-    "pull-stream": "^3.6.0",
+    "pull-stream": "^3.6.8",
     "pull-stringify": "^2.0.0",
     "pull-tee": "^2.0.1",
     "pull-through": "^1.0.18",
@@ -46,6 +46,6 @@
   },
   "devDependencies": {
     "performance-now": "^2.1.0",
-    "tap": "^10.7.2"
+    "tap": "^12.0.1"
   }
 }
