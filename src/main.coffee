@@ -126,6 +126,9 @@ pluck = ( x, key, fallback ) ->
   return method
 
 
+# original_map = require 'pull-stream/throughs/map'
+# @_map_errors = ( P... ) -> original_map P...
+
 ### This is the original `pull-stream/throughs/map` implementation with the `try`/`catch` clause removed so
 all errors are thrown. This, until we find out how to properly handle errors the pull-streams way. Note
 that `_map_errors` behaves exactly like `pull-stream/throughs/filter` which tells me this shouldn't be
