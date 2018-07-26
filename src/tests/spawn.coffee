@@ -29,6 +29,7 @@ jr                        = JSON.stringify
 
 #-----------------------------------------------------------------------------------------------------------
 TAP.test "spawn 1", ( T ) ->
+# do ->
   # new_pushable              = require 'pull-pushable'
   # source            = new_pushable()
   #.........................................................................................................
@@ -42,11 +43,13 @@ TAP.test "spawn 1", ( T ) ->
   #.........................................................................................................
   pipeline = []
   pipeline.push source
-  pipeline.push PS.$watch ( data ) -> whisper rpr data
-  pipeline.push PS.$split()
+  pipeline.push PS.$watch ( data ) -> whisper '10901-1', rpr data
+  pipeline.push PS.filter ( data ) -> data[ 0 ] is 'stdout'
+  pipeline.push $         ( data, send ) -> send data[ 1 ]
+  # pipeline.push PS.$split()
   # pipeline.push PS.$show title: '==='
   pipeline.push PS.$collect()
-  pipeline.push PS.$watch ( lines ) -> help lines
+  pipeline.push PS.$watch ( lines ) -> help '10901-2', lines
   pipeline.push on_stop.add PS.$drain()
   #.........................................................................................................
   PS.pull pipeline...
