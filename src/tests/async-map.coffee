@@ -115,44 +115,6 @@ after = ( dts, f ) -> setTimeout f, dts * 1000
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-### TAINT should be ( hint, method ) ###
-provide_async = ->
-  unpack_sym = Symbol 'unpack'
-  #-----------------------------------------------------------------------------------------------------------
-  @$async = ( method ) ->
-    throw new Error "µ18187 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-    throw new Error "µ18203 expected one argument, got #{arity}" unless ( arity = arguments.length ) is 1
-    throw new Error "µ18219 method arity #{arity} not implemented" unless ( arity = method.length ) is 3
-    pipeline = []
-    #.........................................................................................................
-    pipeline.push @_$paramap ( d, handler ) =>
-      collector               = []
-      collector[ unpack_sym ] = true
-      #.......................................................................................................
-      send = ( d ) =>
-        return handler true if d is null
-        collector.push d
-        return null
-      #.......................................................................................................
-      done = =>
-        handler null, collector
-        collector = null
-        return null
-      #.......................................................................................................
-      method d, send, done
-      return null
-    #.........................................................................................................
-    pipeline.push @$ ( d, send ) =>
-      if ( CND.isa_list d ) and d[ unpack_sym ]
-        send x for x in d
-      else
-        send d
-    #.........................................................................................................
-    return @pull pipeline...
-  return @
-provide_async.apply PS
-
-#-----------------------------------------------------------------------------------------------------------
 $send_three = ->
   return PS.$async ( d, send, done ) ->
     count = 0
@@ -192,8 +154,8 @@ $send_three = ->
 ############################################################################################################
 unless module.parent?
   include = [
-    # "async 1"
-    # "async 1 paramap"
+    "async 1"
+    "async 1 paramap"
     "async 2"
     ]
   @_prune()

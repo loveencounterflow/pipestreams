@@ -43,10 +43,11 @@ $values                   = require 'pull-stream/sources/values'
 pull                      = require 'pull-stream'
 # map                       = pull.map.bind pull
 pull_through              = require 'pull-through'
-pull_async_map            = require 'pull-stream/throughs/async-map'
 pull_many                 = require 'pull-many'
 pull_cont                 = require 'pull-cont'
-pull_paramap              = require 'pull-paramap'
+@_$async_map              = require 'pull-stream/throughs/async-map'
+@_$paramap                = require 'pull-paramap'
+unpack_sym                = Symbol 'unpack'
 # pull_infinite             = require 'pull-stream/sources/infinite'
 Event_emitter             = require 'eventemitter3'
 #...........................................................................................................
@@ -324,13 +325,37 @@ this._map_errors = function (mapper) {
   return pull_through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
-@_$async_map  = pull_async_map
-@_$paramap    = pull_paramap
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$async = @remit_async = ( method ) ->
-#   throw new Error "µ21653 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-#   throw new Error "µ22418 ### MEH ###" unless ( arity = method.length ) is 2
+@$async = ( method ) ->
+  ### TAINT signature should be ( hint, method ) ###
+  throw new Error "µ18187 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "µ18203 expected one argument, got #{arity}" unless ( arity = arguments.length ) is 1
+  throw new Error "µ18219 method arity #{arity} not implemented" unless ( arity = method.length ) is 3
+  pipeline = []
+  #.........................................................................................................
+  pipeline.push @_$paramap ( d, handler ) =>
+    collector               = []
+    collector[ unpack_sym ] = true
+    #.......................................................................................................
+    send = ( d ) =>
+      return handler true if d is null
+      collector.push d
+      return null
+    #.......................................................................................................
+    done = =>
+      handler null, collector
+      collector = null
+      return null
+    #.......................................................................................................
+    method d, send, done
+    return null
+  #.........................................................................................................
+  pipeline.push @$ ( d, send ) =>
+    if ( CND.isa_list d ) and d[ unpack_sym ]
+      send x for x in d
+    else
+      send d
+  #.........................................................................................................
+  return @pull pipeline...
 
 
 #===========================================================================================================
