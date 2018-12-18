@@ -33,6 +33,7 @@
     "pull-cont": "^0.1.1",
     "pull-file": "^1.1.0",
     "pull-many": "^1.0.8",
+    "pull-paramap": "^1.2.2",
     "pull-pushable": "^2.2.0",
     "pull-split": "^0.2.0",
     "pull-stream": "^3.6.9",
