@@ -46,6 +46,7 @@ pull_through              = require 'pull-through'
 pull_async_map            = require 'pull-stream/throughs/async-map'
 pull_many                 = require 'pull-many'
 pull_cont                 = require 'pull-cont'
+pull_paramap              = require 'pull-paramap'
 # pull_infinite             = require 'pull-stream/sources/infinite'
 Event_emitter             = require 'eventemitter3'
 #...........................................................................................................
@@ -320,7 +321,8 @@ this._map_errors = function (mapper) {
   return pull_through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
-@_$async_map = pull_async_map
+@_$async_map  = pull_async_map
+@_$paramap    = pull_paramap
 
 # #-----------------------------------------------------------------------------------------------------------
 # @$async = @remit_async = ( method ) ->
