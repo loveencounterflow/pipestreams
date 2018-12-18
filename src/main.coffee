@@ -396,6 +396,7 @@ this._map_errors = function (mapper) {
 
 #-----------------------------------------------------------------------------------------------------------
 @pull = ( methods... ) ->
+  return @$pass() if methods.length is 0
   for method, idx in methods
     continue if ( type = CND.type_of method ) is 'function'
     throw new Error "expected a function, got a #{type} for argument # #{idx + 1}"
