@@ -74,7 +74,7 @@ pluck = ( x, key, fallback ) ->
   #   # ### experimental: accept only 'namespaced' event names a la 'foo/bar' and known names
   #   # so as to prevent accidental usage of bogus event names like `end`, `close`, `finish` etc: ###
   #   # unless ( '/' in name ) or ( name is 'stop' )
-  #   #   throw new Error "unknown event name #{rpr name}"
+  #   #   throw new Error "µ1763 unknown event name #{rpr name}"
   #   emitter.on name, P...
   #.........................................................................................................
   return R
@@ -85,10 +85,10 @@ pluck = ( x, key, fallback ) ->
     when 0 then null
     when 2
       unless ( type = CND.type_of for_event_name ) is 'text'
-        throw new Error "expected a text, got a #{type}"
+        throw new Error "µ2528 expected a text, got a #{type}"
       unless ( type = CND.type_of method ) is 'function'
-        throw new Error "expected a function, got a #{type}"
-    else throw new Error "expected 0 or 2 arguments, got #{arity}"
+        throw new Error "µ3293 expected a function, got a #{type}"
+    else throw new Error "µ4058 expected 0 or 2 arguments, got #{arity}"
   #.........................................................................................................
   R               = @_new_event_emitter()
   R._event_counts = {}
@@ -103,8 +103,8 @@ pluck = ( x, key, fallback ) ->
   R.add = ( emitter ) ->
     ### TAINT only works with PipeStreams event emitters; could overwrite `emit` method otherwise ###
     unless ( type = CND.type_of emitter.on ) is 'function'
-      throw new Error "expected an event emitter with an `on` method, got a #{type}"
-    throw new Error "got duplicate emitter" if R._emitters.has emitter
+      throw new Error "µ4823 expected an event emitter with an `on` method, got a #{type}"
+    throw new Error "µ5588 got duplicate emitter" if R._emitters.has emitter
     R._emitters.set emitter, 1
     R._source_count += +1
     emitter.on '*', aggregator
@@ -188,9 +188,9 @@ this._map_errors = function (mapper) {
   else
     path    = path_or_stream.path ? '<UNKNOWN PATH>'
     unless @_isa_njs_stream path_or_stream
-      throw new Error "expected a path or a stream, got a #{CND.type_of path_or_stream}"
+      throw new Error "µ6353 expected a path or a stream, got a #{CND.type_of path_or_stream}"
     unless path_or_stream.writable
-      throw new Error "expected a path or a stream, got a #{CND.type_of path_or_stream}"
+      throw new Error "µ7118 expected a path or a stream, got a #{CND.type_of path_or_stream}"
     stream  = path_or_stream
   ### TAINT intermediate solution ###
   R       = STPS.sink stream, ( error ) => throw error if error?
@@ -211,7 +211,7 @@ this._map_errors = function (mapper) {
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_file_sink_using_pwf = ( path, options = null ) ->
-  throw new Error "not implemented"
+  throw new Error "µ7883 not implemented"
   # TAINT errors with "DeprecationWarning: Calling an asynchronous function without callback is deprecated." (???)
   options ?= {}
   return new_file_sink path, options, ( error ) ->
@@ -223,15 +223,15 @@ this._map_errors = function (mapper) {
 ### TAINT refactor: `PS.new_source.from_path`, `PS.new_source.from_text`..., `PS.new_sink.as_text` (???) ###
 @new_text_source = ( text ) -> $values [ text, ]
 @new_text_sink = ->
-  throw new Error "not implemented"
+  throw new Error "µ8648 not implemented"
 
 #-----------------------------------------------------------------------------------------------------------
 @new_value_source = ( values ) -> $values values
 
 #-----------------------------------------------------------------------------------------------------------
 @map_start = ( method ) ->
-  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 0
+  throw new Error "µ9413 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "µ10178 method arity #{arity} not implemented" unless ( arity = method.length ) is 0
   is_first = yes
   return @_map_errors ( data ) =>
     if is_first
@@ -241,16 +241,16 @@ this._map_errors = function (mapper) {
 
 #-----------------------------------------------------------------------------------------------------------
 @map_stop = ( method ) ->
-  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 0
+  throw new Error "µ10943 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "µ11708 method arity #{arity} not implemented" unless ( arity = method.length ) is 0
   return $pass_through return_id, ( abort ) ->
     method()
     return abort
 
 #-----------------------------------------------------------------------------------------------------------
 @map_first = ( method ) ->
-  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 1
+  throw new Error "µ12473 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "µ13238 method arity #{arity} not implemented" unless ( arity = method.length ) is 1
   is_first = yes
   return @_map_errors ( data ) =>
     if is_first
@@ -260,25 +260,25 @@ this._map_errors = function (mapper) {
 
 #-----------------------------------------------------------------------------------------------------------
 @map_last = ( method ) ->
-  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "method arity #{arity} not implemented" unless ( arity = method.length ) is 1
+  throw new Error "µ14003 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "µ14768 method arity #{arity} not implemented" unless ( arity = method.length ) is 1
   throw new Error 'meh'
 
 #-----------------------------------------------------------------------------------------------------------
 @filter = ( method ) ->
-  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "µ15533 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   switch arity = method.length
     when 1 then null
-    else throw new Error "method arity #{arity} not implemented"
+    else throw new Error "µ16298 method arity #{arity} not implemented"
   #.........................................................................................................
   return pull.filter method
 
 #-----------------------------------------------------------------------------------------------------------
 @map = ( method ) ->
-  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "µ17063 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   switch arity = method.length
     when 1 then null
-    else throw new Error "method arity #{arity} not implemented"
+    else throw new Error "µ17828 method arity #{arity} not implemented"
   #.........................................................................................................
   return @_map_errors method
 
@@ -289,14 +289,14 @@ this._map_errors = function (mapper) {
       method  = hint
       hint    = null
     when 2
-      throw new Error "unknown hint #{rpr hint}" unless hint is 'null'
-    else throw new Error "expected 1 or 2 arguments, got #{arity}"
+      throw new Error "µ18593 unknown hint #{rpr hint}" unless hint is 'null'
+    else throw new Error "µ19358 expected 1 or 2 arguments, got #{arity}"
   #.........................................................................................................
   switch client_arity = method.length
     when 2 then null
-    else throw new Error "method arity #{client_arity} not implemented"
+    else throw new Error "µ20123 method arity #{client_arity} not implemented"
   #.........................................................................................................
-  throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+  throw new Error "µ20888 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   #.........................................................................................................
   self    = null
   send    = ( data ) => self.queue data
@@ -324,8 +324,8 @@ this._map_errors = function (mapper) {
 
 # #-----------------------------------------------------------------------------------------------------------
 # @$async = @remit_async = ( method ) ->
-#   throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-#   throw new Error "### MEH ###" unless ( arity = method.length ) is 2
+#   throw new Error "µ21653 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+#   throw new Error "µ22418 ### MEH ###" unless ( arity = method.length ) is 2
 
 
 #===========================================================================================================
@@ -341,7 +341,7 @@ this._map_errors = function (mapper) {
 @$push_to_list    = ( collector ) -> @_map_errors ( data ) => collector.push  data; return data
 @$add_to_set      = ( collector ) -> @_map_errors ( data ) => collector.add   data; return data
 #...........................................................................................................
-@$count           = -> throw new Error "not implemented"
+@$count           = -> throw new Error "µ23183 not implemented"
 @$take            = $take
 
 #-----------------------------------------------------------------------------------------------------------
@@ -369,9 +369,9 @@ this._map_errors = function (mapper) {
 
 #-----------------------------------------------------------------------------------------------------------
 @$name_fields = ( names ) ->
-  throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of names ) is 'list'
+  throw new Error "µ23948 expected a list, got a #{type}" unless ( type = CND.type_of names ) is 'list'
   return @_map_errors ( fields ) =>
-    throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of fields ) is 'list'
+    throw new Error "µ24713 expected a list, got a #{type}" unless ( type = CND.type_of fields ) is 'list'
     R = {}
     for value, idx in fields
       name      = names[ idx ] ?= "field_#{idx}"
@@ -399,12 +399,12 @@ this._map_errors = function (mapper) {
   return @$pass() if methods.length is 0
   for method, idx in methods
     continue if ( type = CND.type_of method ) is 'function'
-    throw new Error "expected a function, got a #{type} for argument # #{idx + 1}"
+    throw new Error "µ25478 expected a function, got a #{type} for argument # #{idx + 1}"
   return pull methods...
 
 #-----------------------------------------------------------------------------------------------------------
 @$split = ( settings ) ->
-  throw new Error "MEH" if settings?
+  throw new Error "µ26243 MEH" if settings?
   R         = []
   matcher   = null
   mapper    = null
@@ -429,12 +429,12 @@ this._map_errors = function (mapper) {
           when 'text'
             joiner ?= ''
           when 'buffer'
-            throw new Error "joiner not supported for buffers, got #{rpr joiner}" if joiner?
+            throw new Error "µ27008 joiner not supported for buffers, got #{rpr joiner}" if joiner?
           else
-            throw new Error "expected a text or a buffer, got a #{type}"
+            throw new Error "µ27773 expected a text or a buffer, got a #{type}"
       else
         unless ( this_type = CND.type_of data ) is type
-          throw new Error "expected a #{type}, got a #{this_type}"
+          throw new Error "µ28538 expected a #{type}, got a #{this_type}"
       length += data.length
       collector.push data
     else
@@ -445,14 +445,14 @@ this._map_errors = function (mapper) {
 
 #-----------------------------------------------------------------------------------------------------------
 @$pluck = ( settings ) ->
-  throw new Error "need settings 'keys', got #{rpr settings}" unless settings?
+  throw new Error "µ29303 need settings 'keys', got #{rpr settings}" unless settings?
   { keys, } = settings
-  throw new Error "need settings 'keys', got #{rpr settings}" unless keys?
+  throw new Error "µ30068 need settings 'keys', got #{rpr settings}" unless keys?
   keys      = keys.split /,\s*|\s+/ if CND.isa_text keys
-  throw new Error "need settings 'keys', got #{rpr settings}" unless keys.length > 0
+  throw new Error "µ30833 need settings 'keys', got #{rpr settings}" unless keys.length > 0
   as        = settings[ 'as' ] ? 'object'
   unless as in [ 'list', 'object', 'pod', ]
-    throw new Error "expected 'list', 'object' or 'pod', got #{rpr as}"
+    throw new Error "µ31598 expected 'list', 'object' or 'pod', got #{rpr as}"
   if as is 'list'
     return @map ( data ) => ( data[ key ] for key in keys )
   return @map ( data ) =>
@@ -462,7 +462,7 @@ this._map_errors = function (mapper) {
 
 #-----------------------------------------------------------------------------------------------------------
 @$gliding_window = ( width, method ) ->
-  throw new Error "expected a number, got a #{type}" unless ( CND.type_of width ) is 'number'
+  throw new Error "µ32363 expected a number, got a #{type}" unless ( CND.type_of width ) is 'number'
   section = []
   send    = null
   #.........................................................................................................
@@ -486,7 +486,7 @@ this._map_errors = function (mapper) {
 
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( settings ) ->
-  throw new Error "API changed" if settings?
+  throw new Error "µ33128 API changed" if settings?
   collector = []
   return @$ 'null', ( data, send ) =>
     if data? then collector.push data
@@ -512,10 +512,10 @@ this._map_errors = function (mapper) {
       direction = settings[ 'direction' ] ? 'ascending'
       sorter    = settings[ 'sorter'    ] ? null
       key       = settings[ 'key'       ] ? null
-    else throw new Error "expected 0 or 1 arguments, got #{arity}"
+    else throw new Error "µ33893 expected 0 or 1 arguments, got #{arity}"
   #.........................................................................................................
   unless direction in [ 'ascending', 'descending', ]
-    throw new Error "expected 'ascending' or 'descending' for direction, got #{rpr direction}"
+    throw new Error "µ34658 expected 'ascending' or 'descending' for direction, got #{rpr direction}"
   #.........................................................................................................
   unless sorter?
     #.......................................................................................................
@@ -526,13 +526,13 @@ this._map_errors = function (mapper) {
     #.......................................................................................................
     validate_type = ( type_a, type_b, include_list = no ) =>
       unless type_a is type_b
-        throw new Error "unable to compare a #{type_a} with a #{type_b}"
+        throw new Error "µ35423 unable to compare a #{type_a} with a #{type_b}"
       if include_list
         unless type_a in [ 'number', 'date', 'text', 'list', ]
-          throw new Error "unable to compare values of type #{type_a}"
+          throw new Error "µ36188 unable to compare values of type #{type_a}"
       else
         unless type_a in [ 'number', 'date', 'text', ]
-          throw new Error "unable to compare values of type #{type_a}"
+          throw new Error "µ36953 unable to compare values of type #{type_a}"
       return null
     #.......................................................................................................
     if key?
@@ -613,7 +613,7 @@ this._map_errors = function (mapper) {
         when 'stdout'   then  stdout.push value
         when 'stderr'   then  stderr.push value
         when 'exit'     then  return handler null, Object.assign { command, stdout, stderr, }, value
-        else throw new Error "internal error 2201991"
+        else throw new Error "µ37718 internal error 2201991"
       return null
   #.........................................................................................................
   source    = @spawn P...
@@ -634,9 +634,9 @@ this._map_errors = function (mapper) {
   #.........................................................................................................
   switch arity = arguments.length
     when 1, 2 then null
-    else throw new Error "expected 1 or 2 arguments, got #{arity}"
+    else throw new Error "µ38483 expected 1 or 2 arguments, got #{arity}"
   #.........................................................................................................
-  # throw new Error "deprecated setting: error_to_exit" if ( pluck settings, 'error_to_exit',  null )?
+  # throw new Error "µ39248 deprecated setting: error_to_exit" if ( pluck settings, 'error_to_exit',  null )?
   # stderr_target     = pluck settings, 'stderr', 'stderr'
   settings          = Object.assign { shell: yes, }, settings
   stdout_is_binary  = pluck settings, 'binary',         no
@@ -650,9 +650,9 @@ this._map_errors = function (mapper) {
       cp = CP.spawn command, settings
     when 'list'
       unless command.length > 0
-        throw new Error "expected a list with at least one value, got #{rpr command}"
+        throw new Error "µ40013 expected a list with at least one value, got #{rpr command}"
       cp = CP.spawn command[ 0 ], command[ 1 .. ], settings
-    else throw new Error "expected a text or a list for command, got #{command_type}"
+    else throw new Error "µ40778 expected a text or a list for command, got #{command_type}"
   #.........................................................................................................
   stdout            = STPS.source cp.stdout
   stderr            = STPS.source cp.stderr
@@ -749,7 +749,7 @@ this._map_errors = function (mapper) {
               value.error = error.join '\n'
               value.error = null if value.error.length is 0
               send event
-            else throw new Error "internal error 110918"
+            else throw new Error "µ41543 internal error 110918"
   #.........................................................................................................
   source = pull funnel...
   return [ cp, source, ]
@@ -774,7 +774,7 @@ this._map_errors = function (mapper) {
 @$sample = ( p = 0.5, options ) ->
   #.........................................................................................................
   unless 0 <= p <= 1
-    throw new Error "expected a number between 0 and 1, got #{rpr p}"
+    throw new Error "µ42308 expected a number between 0 and 1, got #{rpr p}"
   #.........................................................................................................
   ### Handle trivial edge cases faster (hopefully): ###
   return ( @map     ( record ) => record  ) if p == 1
