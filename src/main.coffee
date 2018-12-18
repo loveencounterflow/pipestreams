@@ -320,7 +320,7 @@ this._map_errors = function (mapper) {
   return pull_through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
-@async_map = pull_async_map
+@_$async_map = pull_async_map
 
 # #-----------------------------------------------------------------------------------------------------------
 # @$async = @remit_async = ( method ) ->
