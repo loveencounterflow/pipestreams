@@ -11,33 +11,6 @@ help                      = CND.get_logger 'help',      badge
 whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
-new_numeral               = require 'numeral'
-format_float              = ( x ) -> ( new_numeral x ).format '0,0.000'
-format_integer            = ( x ) -> ( new_numeral x ).format '0,0'
-#...........................................................................................................
-PATH                      = require 'path'
-FS                        = require 'fs'
-#...........................................................................................................
-$split                    = require 'pull-split'
-$stringify                = require 'pull-stringify'
-$utf8                     = require 'pull-utf8-decoder'
-new_file_source           = require 'pull-file'
-pull                      = require 'pull-stream'
-### NOTE these two are different: ###
-# $pass_through             = require 'pull-stream/throughs/through'
-through                   = require 'pull-through'
-async_map                 = require 'pull-stream/throughs/async-map'
-$drain                    = require 'pull-stream/sinks/drain'
-STPS                      = require 'stream-to-pull-stream'
-#...........................................................................................................
-S                         = {}
-S.pass_through_count      = 0
-# S.pass_through_count      = 1
-# S.pass_through_count      = 100
-# S.implementation          = 'pull-stream'
-S.implementation          = 'pipestreams-map'
-# S.implementation          = 'pipestreams-remit'
-#...........................................................................................................
 test                      = require 'guy-test'
 jr                        = JSON.stringify
 #...........................................................................................................

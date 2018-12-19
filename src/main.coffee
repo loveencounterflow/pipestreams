@@ -51,6 +51,9 @@ unpack_sym                = Symbol 'unpack'
 # pull_infinite             = require 'pull-stream/sources/infinite'
 Event_emitter             = require 'eventemitter3'
 #...........................................................................................................
+after                     = ( dts, f ) -> setTimeout f, dts * 1000
+defer                     = setImmediate
+#...........................................................................................................
 return_id                 = ( x ) -> x
 # { step, }                 = CND.suspend
 #-----------------------------------------------------------------------------------------------------------
@@ -270,7 +273,7 @@ this._map_errors = function (mapper) {
   throw new Error 'meh'
 
 #-----------------------------------------------------------------------------------------------------------
-@filter = ( method ) ->
+@$filter = ( method ) ->
   throw new Error "µ15533 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   switch arity = method.length
     when 1 then null
@@ -327,6 +330,8 @@ this._map_errors = function (mapper) {
 #-----------------------------------------------------------------------------------------------------------
 @$async = ( method ) ->
   ### TAINT signature should be ( hint, method ) ###
+  ### TAINT currently all results from client method are buffered until `done` gets called; see whether
+  it is possible to use `await` so that each result can be sent doen the pipeline w/out buffering ###
   throw new Error "µ18187 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   throw new Error "µ18203 expected one argument, got #{arity}" unless ( arity = arguments.length ) is 1
   throw new Error "µ18219 method arity #{arity} not implemented" unless ( arity = method.length ) is 3
@@ -356,6 +361,13 @@ this._map_errors = function (mapper) {
       send d
   #.........................................................................................................
   return @pull pipeline...
+
+
+#===========================================================================================================
+# ASYNC TRANSFORMS
+#-----------------------------------------------------------------------------------------------------------
+@$defer =         -> @$async ( d, send, done ) -> defer -> send d; done()
+@$delay = ( dts ) -> @$async ( d, send, done ) -> after dts, -> send d; done()
 
 
 #===========================================================================================================
@@ -822,6 +834,11 @@ this._map_errors = function (mapper) {
     send record if rnd() < p
 
 
-
+############################################################################################################
+L = @
+do ->
+  for key, value of L
+    continue unless CND.isa_function value
+    L[ key ] = value.bind L
 
 
