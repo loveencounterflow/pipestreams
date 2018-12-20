@@ -8,7 +8,7 @@ FS                        = require 'fs'
 #...........................................................................................................
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'MKTS/EXPERIMENTS/RECYCLE'
+badge                     = 'PIPESTREAMS/EXPERIMENTS/RECYCLE'
 log                       = CND.get_logger 'plain',     badge
 info                      = CND.get_logger 'info',      badge
 whisper                   = CND.get_logger 'whisper',   badge
@@ -25,7 +25,7 @@ echo                      = CND.echo.bind CND
 # D                         = require 'pipedreams'
 # $                         = D.remit.bind D
 # $async                    = D.remit_async.bind D
-PS                        = require 'pipestreams'
+PS                        = require '../..'
 { $, $async, }            = PS
 rprx                      = ( d ) -> "#{d.sigil} #{d.key}:: #{jr d.value ? null} #{jr d.stamped ? false}"
 _new_push_source          = require 'pull-pushable'

@@ -8,7 +8,7 @@ FS                        = require 'fs'
 #...........................................................................................................
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'MKTS/EXPERIMENTS/CIRCULAR-PIPELINES'
+badge                     = 'PIPESTREAMS/EXPERIMENTS/CIRCULAR-PIPELINES'
 log                       = CND.get_logger 'plain',     badge
 info                      = CND.get_logger 'info',      badge
 whisper                   = CND.get_logger 'whisper',   badge
@@ -25,7 +25,7 @@ echo                      = CND.echo.bind CND
 # D                         = require 'pipedreams'
 # $                         = D.remit.bind D
 # $async                    = D.remit_async.bind D
-PS                        = require 'pipestreams'
+PS                        = require '../..'
 { $, $async, }            = PS
 assign                    = Object.assign
 after                     = ( dts, f ) -> setTimeout f, dts * 1000
