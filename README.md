@@ -18,6 +18,7 @@ performance.
 ## Documentation
 
 * [The PDF](./pipestreams-manual/pipestreams-manual.pdf)
+* [PipeStreams: Pipelines and Streams](./pipestreams-manual/chapter-00-intro.md)
 * [sampling](./pipestreams-manual/chapter-00-sampling.md)
 * [spawn](./pipestreams-manual/chapter-00-spawn.md)
 
