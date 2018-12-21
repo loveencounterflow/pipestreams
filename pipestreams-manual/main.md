@@ -1,10 +1,13 @@
 
 
 <document/>
+<<!columns 2>>
 
-<insert src='./chapter-00-sampling.md'/>
-<insert src='./chapter-00-spawn.md'/>
 
+<insert src='./chapter-00-intro.md'   	mode=mktscript/>
+<!-- <insert src='./chapter-00-sampling.md'	mode=mktscript/>
+<insert src='./chapter-00-spawn.md'   	mode=mktscript/>
+ -->
 <!-- <insert src='../README.md' mode=mktscript/> -->
 
 <!-- <new-page/>
