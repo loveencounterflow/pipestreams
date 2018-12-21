@@ -54,11 +54,12 @@ built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
   exclusive and ultimately superfluous modes of operation. In the case of NodeJS
   streams, you have 'new style' vs 'old style' mode of operation: A switch that
   is done transparently based on what seemingly unrelated parts of the API you
-  do in what order. Next, you must decide whether you're dealing with 'objects'
-  or 'binary' data, a completely gratuitous difference: it's just data. Lastly,
-  you can structure your streaming app to do things the `.pipe()`ing way, or,
-  alternatively, the `EventEmitter` way—inheriting [all that is wrong with that
-  API](https://github.com/sindresorhus/emittery#how-is-this-different-than-the-built-in-eventemitter-in-nodejs)).
+  employ in what order. Next, you must decide whether you're dealing with
+  'objects' or 'binary' data, a completely gratuitous difference: it's just
+  data. Lastly, you can structure your streaming app to do things the
+  `.pipe()`ing way, or, alternatively, the `EventEmitter` way—inheriting [all
+  that is wrong with the `EventEmitter` API and
+  implementation](https://github.com/sindresorhus/emittery#how-is-this-different-than-the-built-in-eventemitter-in-nodejs)).
   To top it off, [you still don't get proper error handling with NodeJS
   streams](https://stackoverflow.com/a/22389498/7568091).
 
