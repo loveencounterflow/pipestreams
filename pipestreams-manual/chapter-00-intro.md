@@ -94,41 +94,6 @@ ellipsis notation `$f(), ...` represents 'any number of transforms'.
 
 `pull [ source, $f(), ..., sink, ] -> stream`
 
-### Comparison with NodeJS Streams, Pull-Streams
-
-Here are a few points that highlight the reasons why I wrote PipeStreams (after
-writing [PipeDreams](https://github.com/loveencounterflow/pipedreams) which were
-built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
-
-* The [basic API ideas of
-  PipeDreams](https://github.com/loveencounterflow/pipedreams#the-remit-and-remit-async-methods)
-  turned out to be a highly useful and effective tool to create not-so-small
-  data processing assemblies. Before pipelines, such assemblies tended to be
-  ad-hoc messes of synchronous and asynchronous pieces of code calling each
-  other; after pipelines, assemblies could be written as linear sequences of
-  named functions.
-
-* The stream transform call convention—where a transform is (produced from) a
-  function `( data, send ) ->` that accepts a piece of `data` and a `send`
-  method that is used to send data downstream—proved to be the main enabling
-  aspect of the PipeDreams library. All of a sudden you could just dump [all
-  that is wrong with NodeJS
-  streams](http://dominictarr.com/post/145135293917/history-of-streams) and
-  forget about all their [Byzantine
-  complexities](https://nodejs.org/api/stream.html): just write a function that
-  `( data, send ) -> ... send data ...` and bang, you're good to go.
-
-* PipeDreams had some downsides, though; apart from some of the *complexities*
-  of NodeJS streams that could not be entirely hidden, it also suffered from
-  their *inherently mediocre performance characteristics*.
-
-* Its underlying implementation is hugely simpler than that of [NodeJS
-  streams]()
-
-*
-
-http://dominictarr.com/post/149248845122/pull-streams-pull-streams-are-a-very-simple
-
 
 ### API Naming and Conventions
 
