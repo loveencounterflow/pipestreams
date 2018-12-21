@@ -55,21 +55,22 @@ sink.
 ### Equivalence Rules
 
 The power of streams—and by streams I mean primarily
-[`pull-stream`s](http://pull-stream.github.io/) on which PipeStreams is
-built—comes from the abstractions it provides. In all of programming,
-*functions* are such powerful abstractions and, hence, versatile tools to build
-programs from because when you take a chunk of code and make it a function with
-a name and a call signature, all of a sudden you have not only a piece of code
-that you can pass around and invoke, you can also put that invocation into
-*another* named function and so on.
+[`pull-stream`](http://pull-stream.github.io/)s on which PipeStreams is
+built—comes from the abstractions it provides. In programming, *functions* are
+such powerful abstractions because when you take a chunk of code and make it a
+function with a name and a call signature, all of a sudden you have not only a
+piece of code that you can pass around and invoke, you can also put that
+invocation into *another* named function and so on. So, a building block made
+from smaller building blocks remains a building block, albeit a more complex
+one.
 
 Likewise, when building processing pipelines from stream transforms, you start
-out by building pipelines from stream primitives, and then go and put entire
-pipelines into other pipelines, taking advantage of the compositional powers
-afforded by the equivalence rules (invariants) that streams guarantee. In the
-below, we use an arrow `a -> b` to symbolize '`a` is equivalent to `b`'. `pull`
-represents the PipeStreams `pull` method (basically `pull-stream`'s `pull`
-method); `$f()`, `$g()` represent stream transforms (see *API Naming and
+out with pipelines built from stream primitives, and then you can go and put
+entire pipelines into other pipelines, taking advantage of the compositional
+powers afforded by the equivalence rules (invariants) that streams guarantee. In
+the below, we use an arrow `a -> b` to symbolize '`a` is equivalent to `b`'.
+`pull` represents the PipeStreams `pull` method (basically `pull-stream`'s
+`pull` method); `$f()`, `$g()` represent stream transforms (see *API Naming and
 Conventions*); `$f(), ...` represents 'any number of transforms'.
 
 * A pipeline with a source and any number of transforms is equivalent to a
