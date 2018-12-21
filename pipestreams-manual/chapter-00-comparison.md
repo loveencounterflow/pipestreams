@@ -31,7 +31,8 @@ built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
   pipeline incurs a non-trivial time-penalty, so much that **the performance of
   NodejS streams pipelines with more than a very few steps will be dominated by
   the number of steps, even if those steps are no-ops**; this at least used to
-  be the case I abandoned NodeJS streams and turned to Pull-Streams.
+  be the case at the time when I abandoned NodeJS streams and turned to
+  Pull-Streams.
 
 * The underlying implementation of Pull-Streams is [hugely
   simpler](http://dominictarr.com/post/149248845122/pull-streams-pull-streams-are-a-very-simple)
@@ -47,14 +48,16 @@ built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
 
   So while 'simple' doesn't equal 'easy' (in the [Rich
   Hickey](https://www.youtube.com/watch?v=rI8tNMsozo0) sense of the word) it's
-  still true that simpler concepts and simpler implementation are to be
-  preferred over convoluted implementations that suffer from
-  backward-compatibility pressures and maintain several parallel, mutually
+  still true that simpler concepts, a simpler implementation and a simpler API
+  are to be preferred over a convoluted implementation (and API) that suffers
+  from backward-compatibility pressures and maintains several parallel, mutually
   exclusive and ultimately superfluous modes of operation. In the case of NodeJS
-  streams, you have 'new style' vs 'old style' mode; then you must decide
-  whether you're dealing with 'objects' or 'binary' data, which is completely
-  gratuitous; and then you can do everything the `EventEmitter` way (inheriting
-  [all that is wrong with that
+  streams, you have 'new style' vs 'old style' mode of operation: A switch that
+  is done transparently based on what seemingly unrelated parts of the API you
+  do in what order. Next, you must decide whether you're dealing with 'objects'
+  or 'binary' data, a completely gratuitous difference: it's just data. Lastly,
+  you can structure your streaming app to do things the `.pipe()`ing way, or,
+  alternatively, the `EventEmitter` way—inheriting [all that is wrong with that
   API](https://github.com/sindresorhus/emittery#how-is-this-different-than-the-built-in-eventemitter-in-nodejs)).
   To top it off, [you still don't get proper error handling with NodeJS
   streams](https://stackoverflow.com/a/22389498/7568091).
