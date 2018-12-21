@@ -35,10 +35,10 @@
   upstream and pass zero or more data items *d*<sub>*1*</sub>,
   *d*<sub>*2*</sub>,&nbsp;... down the stream, consecutively.
 
-In short one can say that in each stream, data comes out of a source **A**,
+In short one can say that in each stream, data comes out of a source,
 flows through a number of transforms $*f<sub>i</sub>*, and goes into some
-kind of sink **Z**. A **complete pipeline** has at least a source **A** and a
-sink **Z**.
+kind of sink. A **complete pipeline** has at least a source and a
+sink.
 
 * By **streams** (symbolized as Σ) we mean the activity that occurs when a
   complete pipeline has been 'activated', that is made start to process data.
@@ -47,11 +47,69 @@ sink **Z**.
   blurred, and one can, for example, just as well say that a particular event is
   'coming down the stream' or 'coming down the pipeline'.
 
-### Naming Conventions
+### API Naming and Conventions
 
 
+`PS.pull pipeline...`
 
-### Fundamental API
+### Equivalence Rules
+
+The power of streams—and by streams I mean primarily
+[`pull-stream`s](http://pull-stream.github.io/) on which PipeStreams is
+built—comes from the abstractions it provides. In all of programming,
+*functions* are such powerful abstractions and, hence, versatile tools to build
+programs from because when you take a chunk of code and make it a function with
+a name and a call signature, all of a sudden you have not only a piece of code
+that you can pass around and invoke, you can also put that invocation into
+*another* named function and so on.
+
+Likewise, when building processing pipelines from stream transforms, you start
+out by building pipelines from stream primitives, and then go and put entire
+pipelines into other pipelines, taking advantage of the compositional powers
+afforded by the equivalence rules (invariants) that streams guarantee. In the
+below, we use an arrow `a -> b` to symbolize '`a` is equivalent to `b`'. `pull`
+represents the PipeStreams `pull` method (basically `pull-stream`'s `pull`
+method); `$f()`, `$g()` represent stream transforms (see *API Naming and
+Conventions*); `$f(), ...` represents 'any number of transforms'.
+
+* A pipeline with a source and any number of transforms is equivalent to a
+  source:
+
+`pull [ source_1, $f(), ..., ] -> source`
+
+* A pipeline with any number of transforms and a sink is equivalent to a sink:
+
+`pull [ $f(), ..., sink_1 ] -> sink`
+
+* A pipeline with any number of transforms is equivalent to a (more complex)
+  transform; in particular:
+
+`pull [ $f(), ..., ] -> $g()`
+
+* a pipeline with no elements is equivalent to the empty (no-op) transform that
+  passes all data through:
+
+`pull [] -> PS.$pass()`
+
+* A pipeline with a source, any number of transforms and a sink is equivalent to
+  a stream:
+
+`pull [ source, $f(), ..., sink, ] -> stream`
+
+### Simple Examples
+
+####
+
+```coffee
+PS  = require 'pipestreams'
+log = console.log
+p   = []
+p.push PS.new_value_source [ 'foo', 'bar', 'baz', ]
+p.push PS.$show()
+p.push PS.$drain -> log 'done'
+PS.pull p...
+```
+
 
 ```coffee
 PS              = require 'pipestreams'
@@ -69,45 +127,6 @@ p.push PS.$drain()
 PS.pull p...
 source.push 42
 ```
-
-`PS.pull pipeline...`
-
-### XXX
-
-* `pull [ source $f(), ..., ] -> source`
-
-A pipeline with a source and any number of transforms is equivalent to a source.
-
-* `pull [ $f(), ..., sink ] -> sink`
-
-A pipeline with any number of transforms and a sink is equivalent to a sink.
-
-* `pull [ $f(), ..., ] -> $f()`
-
-A pipeline with any number of transforms is equivalent to a (more complex)
-transform; in particular,
-
-* `pull [] -> $pass()`
-
-a pipeline with no elements is equivalent to the empty (no-op) transform that
-passes all data through.
-
-* `pull [ source, $f(), ..., sink, ] -> Σ`
-
-A pipeline with a source, any number of transforms and a sink is equivalent to a
-stream.
-
-### Simple Example
-
-```
-PS  = require 'pipestreams'
-log = console.log
-p   = []
-p.push PS.new_value_source [ 'foo', 'bar', 'baz', ]
-p.push PS.$show()
-p.push PS.$drain -> log 'done'
-```
-
 
 
 
