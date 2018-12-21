@@ -13,11 +13,11 @@ built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
   other; after pipelines, assemblies could be written as linear sequences of
   named functions.
 
-* The stream transform call convention—where a transform is (produced from) a
-  function `( data, send ) ->` that accepts a piece of `data` and a `send`
-  method that is used to send data downstream—proved to be the main enabling
-  aspect of the PipeDreams library. All of a sudden you could just dump [all
-  that is wrong with NodeJS
+* The PipeDreams stream transform call convention—where a transform is (produced
+  from) a function `( data, send ) ->` that accepts a piece of `data` and a
+  `send` method that is used to send data downstream—proved to be the main
+  enabling aspect of said library. All of a sudden you could just dump [all that
+  is wrong with NodeJS
   streams](http://dominictarr.com/post/145135293917/history-of-streams) and
   forget about all their [Byzantine
   complexities](https://nodejs.org/api/stream.html): just write a function that
@@ -28,11 +28,14 @@ built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
   their [*inherently mediocre performance
   characteristics*](https://github.com/loveencounterflow/basic-stream-benchmarks):
   the architecture of NodeJS streams is such that adding a transform to a
-  pipeline incurs a non-trivial time-penalty, so much that **the performance of
-  NodejS streams pipelines with more than a very few steps will be dominated by
-  the number of steps, even if those steps are no-ops**; this at least used to
-  be the case at the time when I abandoned NodeJS streams and turned to
-  Pull-Streams.
+  pipeline incurs a non-trivial run-time performance penalty, so much that **the
+  performance of NodejS streams pipelines with more than a very few steps will
+  be dominated by the number of steps, even if those steps are no-ops**; this at
+  least used to be the case at the time when I abandoned NodeJS streams and
+  turned to Pull-Streams. The whole idea of streams is to do one little thing at
+  a time and have those many little steps co-operate to accomplish a bigger
+  goal; an implementation with an unreasonable cost on adding steps ruins that
+  picture.
 
 * The underlying implementation of Pull-Streams is [hugely
   simpler](http://dominictarr.com/post/149248845122/pull-streams-pull-streams-are-a-very-simple)
@@ -59,9 +62,14 @@ built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
   data. Lastly, you can structure your streaming app to do things the
   `.pipe()`ing way, or, alternatively, the `EventEmitter` way—inheriting [all
   that is wrong with the `EventEmitter` API and
-  implementation](https://github.com/sindresorhus/emittery#how-is-this-different-than-the-built-in-eventemitter-in-nodejs)).
+  implementation](https://github.com/sindresorhus/emittery#how-is-this-different-than-the-built-in-eventemitter-in-nodejs).
   To top it off, [you still don't get proper error handling with NodeJS
   streams](https://stackoverflow.com/a/22389498/7568091).
+
+  > I'm not saying that using the event handling model to process streams is
+  > wrong, I just claim that having NodeJS do both piping and events where
+  > either would have sufficed is what contributes to the rather sad performance
+  > story they deliver.
 
 **I'm really sorry that these points amount to what can be perceived as bashing
 on the NodeJS folks who have given us the great piece of software that is
