@@ -53,7 +53,7 @@ sink **Z**.
 
 ### Fundamental API
 
-```
+```coffee
 PS              = require 'pipestreams'
 { $, $async, }  = PS
 
