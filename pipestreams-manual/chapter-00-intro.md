@@ -47,16 +47,11 @@ sink.
   blurred, and one can, for example, just as well say that a particular event is
   'coming down the stream' or 'coming down the pipeline'.
 
-### API Naming and Conventions
-
-
-`PS.pull pipeline...`
-
 ### Equivalence Rules
 
 The power of streams—and by streams I mean primarily
 [`pull-stream`](http://pull-stream.github.io/)s on which PipeStreams is
-built—comes from the abstractions it provides. In programming, *functions* are
+built—comes from the abstractions they provide. In programming, *functions* are
 such powerful abstractions because when you take a chunk of code and make it a
 function with a name and a call signature, all of a sudden you have not only a
 piece of code that you can pass around and invoke, you can also put that
@@ -68,10 +63,11 @@ Likewise, when building processing pipelines from stream transforms, you start
 out with pipelines built from stream primitives, and then you can go and put
 entire pipelines into other pipelines, taking advantage of the compositional
 powers afforded by the equivalence rules (invariants) that streams guarantee. In
-the below, we use an arrow `a -> b` to symbolize '`a` is equivalent to `b`'.
-`pull` represents the PipeStreams `pull` method (basically `pull-stream`'s
-`pull` method); `$f()`, `$g()` represent stream transforms (see *API Naming and
-Conventions*); `$f(), ...` represents 'any number of transforms'.
+the below, we use an arrow `a -> b` to symbolize '`a` is equivalent to `b`',
+i.e. '`b` acts like an `a`'. `pull` represents the PipeStreams `pull` method
+(basically `pull-stream`'s `pull` method); `$f()`, `$g()` represent stream
+transforms (see *API Naming and Conventions* for the leading dollar sign); the
+ellipsis notation `$f(), ...` represents 'any number of transforms'.
 
 * A pipeline with a source and any number of transforms is equivalent to a
   source:
@@ -83,12 +79,13 @@ Conventions*); `$f(), ...` represents 'any number of transforms'.
 `pull [ $f(), ..., sink_1 ] -> sink`
 
 * A pipeline with any number of transforms is equivalent to a (more complex)
-  transform; in particular:
+  transform:
 
 `pull [ $f(), ..., ] -> $g()`
 
-* a pipeline with no elements is equivalent to the empty (no-op) transform that
-  passes all data through:
+* In particular, a pipeline with no elements is equivalent to the empty (no-op)
+  transform that passes all data through (and that can be omitted in any
+  pipeline except for a smallish penalty in performance):
 
 `pull [] -> PS.$pass()`
 
@@ -97,9 +94,51 @@ Conventions*); `$f(), ...` represents 'any number of transforms'.
 
 `pull [ source, $f(), ..., sink, ] -> stream`
 
+### Comparison with NodeJS Streams, Pull-Streams
+
+Here are a few points that highlight the reasons why I wrote PipeStreams (after
+writing [PipeDreams](https://github.com/loveencounterflow/pipedreams) which were
+built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
+
+* The [basic API ideas of
+  PipeDreams](https://github.com/loveencounterflow/pipedreams#the-remit-and-remit-async-methods)
+  turned out to be a highly useful and effective tool to create not-so-small
+  data processing assemblies. Before pipelines, such assemblies tended to be
+  ad-hoc messes of synchronous and asynchronous pieces of code calling each
+  other; after pipelines, assemblies could be written as linear sequences of
+  named functions.
+
+* The stream transform call convention—where a transform is (produced from) a
+  function `( data, send ) ->` that accepts a piece of `data` and a `send`
+  method that is used to send data downstream—proved to be the main enabling
+  aspect of the PipeDreams library. All of a sudden you could just dump [all
+  that is wrong with NodeJS
+  streams](http://dominictarr.com/post/145135293917/history-of-streams) and
+  forget about all their [Byzantine
+  complexities](https://nodejs.org/api/stream.html): just write a function that
+  `( data, send ) -> ... send data ...` and bang, you're good to go.
+
+* PipeDreams had some downsides, though; apart from some of the *complexities*
+  of NodeJS streams that could not be entirely hidden, it also suffered from
+  their *inherently mediocre performance characteristics*.
+
+* Its underlying implementation is hugely simpler than that of [NodeJS
+  streams]()
+
+*
+
+http://dominictarr.com/post/149248845122/pull-streams-pull-streams-are-a-very-simple
+
+
+### API Naming and Conventions
+
+
+
+`PS.pull pipeline...`
+
 ### Simple Examples
 
-####
+**Ex. 1**
 
 ```coffee
 PS  = require 'pipestreams'
@@ -111,6 +150,7 @@ p.push PS.$drain -> log 'done'
 PS.pull p...
 ```
 
+**Ex. 2**
 
 ```coffee
 PS              = require 'pipestreams'
