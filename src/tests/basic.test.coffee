@@ -17,7 +17,7 @@ echo                      = CND.echo.bind CND
 PATH                      = require 'path'
 FS                        = require 'fs'
 OS                        = require 'os'
-TAP                       = require 'tap'
+test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
@@ -28,8 +28,19 @@ $values                   = require 'pull-stream/sources/values'
 $pull_drain               = require 'pull-stream/sinks/drain'
 pull_through              = require 'pull-through'
 
+#-----------------------------------------------------------------------------------------------------------
+@_prune = ->
+  for name, value of @
+    continue if name.startsWith '_'
+    delete @[ name ] unless name in include
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@_main = ->
+  test @, 'timeout': 30000
+
 # #-----------------------------------------------------------------------------------------------------------
-# TAP.test "test line assembler", ( T ) ->
+# @[ "test line assembler" ] = ( T, done ) ->
 #   text = """
 #   "　2. 纯；专：专～。～心～意。"
 #   !"　3. 全；满：～生。～地水。"
@@ -52,14 +63,14 @@ pull_through              = require 'pull-through'
 #       # help rpr collector.join '\n'
 #       # debug collector
 #       if CND.equals text, collector.join '\n'
-#         T.pass "texts are equal"
-#       T.end()
+#         T.succeed "texts are equal"
+#       done()
 #   for chunk in chunks
 #     assembler chunk
 #   assembler null
 
 # #-----------------------------------------------------------------------------------------------------------
-# TAP.test "test throughput (1)", ( T ) ->
+# @[ "test throughput (1)" ] = ( T, done ) ->
 #   # input   = @new_stream PATH.resolve __dirname, '../test-data/guoxuedashi-excerpts-short.txt'
 #   input   = PS.new_stream PATH.resolve __dirname, '../../test-data/Unicode-NamesList-tiny.txt'
 #   output  = FS.createWriteStream '/tmp/output.txt'
@@ -67,22 +78,22 @@ pull_through              = require 'pull-through'
 #   input
 #     .pipe PS.$split()
 #     # .pipe PS.$show()
-#     .pipe PS.$pass()
+#     .pipe PS.$succeed()
 #     .pipe PS.$as_line()
 #     .pipe $ ( line, send ) ->
 #       lines.push line
 #       send line
 #     .pipe output
 #   ### TAINT use PipeStreams method ###
-#   input.on 'end', -> output.end()
+#   input.on 'end', -> outpudone()
 #   output.on 'close', ->
 #     # if CND.equals lines.join '\n'
-#     T.pass "assuming equality"
-#     T.end()
+#     T.succeed "assuming equality"
+#     done()
 #   return null
 
 # #-----------------------------------------------------------------------------------------------------------
-# TAP.test "test throughput (2)", ( T ) ->
+# @[ "test throughput (2)" ] = ( T, done ) ->
 #   # input   = @new_stream PATH.resolve __dirname, '../test-data/guoxuedashi-excerpts-short.txt'
 #   input   = PS.new_stream PATH.resolve __dirname, '../../test-data/Unicode-NamesList-tiny.txt'
 #   output  = FS.createWriteStream '/tmp/output.txt'
@@ -90,23 +101,23 @@ pull_through              = require 'pull-through'
 #   p       = input
 #   p       = p.pipe PS.$split()
 #   # p       = p.pipe PS.$show()
-#   p       = p.pipe PS.$pass()
+#   p       = p.pipe PS.$succeed()
 #   p       = p.pipe PS.$as_line()
 #   p       = p.pipe $ ( line, send ) ->
 #       lines.push line
 #       send line
 #   p       = p.pipe output
 #   ### TAINT use PipeStreams method ###
-#   input.on 'end', -> output.end()
+#   input.on 'end', -> outpudone()
 #   output.on 'close', ->
 #     # if CND.equals lines.join '\n'
 #     # debug '12001', lines
-#     T.pass "assuming equality"
-#     T.end()
+#     T.succeed "assuming equality"
+#     done()
 #   return null
 
 # #-----------------------------------------------------------------------------------------------------------
-# TAP.test "read with pipestreams", ( T ) ->
+# @[ "read with pipestreams" ] = ( T, done ) ->
 #   matcher       = [
 #     '01 ; charset=UTF-8',
 #     '02 @@@\tThe Unicode Standard 9.0.0',
@@ -154,18 +165,18 @@ pull_through              = require 'pull-through'
 #     # debug '88862', S
 #     # debug '88862', collector
 #     if CND.equals collector, matcher
-#       T.pass "collector equals matcher"
-#     T.end()
+#       T.succeed "collector equals matcher"
+#     done()
 #   #.........................................................................................................
 #   ### TAINT should be done by PipeStreams ###
 #   input.on 'end', ->
-#     output.end()
+#     outpudone()
 #   #.........................................................................................................
 #   return null
 
 
 # #-----------------------------------------------------------------------------------------------------------
-# TAP.test "remit without end detection", ( T ) ->
+# @[ "remit without end detection" ] = ( T, done ) ->
 #   pipeline = []
 #   pipeline.push $values Array.from 'abcdef'
 #   pipeline.push $ ( data, send ) ->
@@ -174,11 +185,12 @@ pull_through              = require 'pull-through'
 #   pipeline.push PS.$show()
 #   pipeline.push $pull_drain()
 #   PS.pull pipeline...
-#   T.pass "ok"
-#   T.end()
+#   T.succeed "ok"
+#   done()
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "remit with end detection", ( T ) ->
+@[ "remit with end detection" ] = ( T, done ) ->
+  # debug ( key for key of T ); xxx
   pipeline = []
   pipeline.push $values Array.from 'abcdef'
   # pipeline.push pull_through ( ( data ) -> urge data ), ( -> urge 'ok'; @queue null )
@@ -192,11 +204,11 @@ TAP.test "remit with end detection", ( T ) ->
   pipeline.push PS.$show()
   pipeline.push $pull_drain()
   PS.pull pipeline...
-  T.pass "ok"
-  T.end()
+  T.succeed "ok"
+  done()
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "wrap FS object for sink", ( T ) ->
+@[ "wrap FS object for sink" ] = ( T, done ) ->
   output_path = '/tmp/pipestreams-test-output.txt'
   output_file = FS.createWriteStream output_path
   sink        = PS.new_file_sink output_file
@@ -207,10 +219,10 @@ TAP.test "wrap FS object for sink", ( T ) ->
   pull pipeline...
   output_file.on 'finish', =>
     T.ok CND.equals 'abcdef', FS.readFileSync output_path, { encoding: 'utf-8', }
-    T.end()
+    done()
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "function as pull-stream source", ( T ) ->
+@[ "function as pull-stream source" ] = ( T, done ) ->
   random = ( n ) =>
     return ( end, callback ) =>
       if end?
@@ -235,8 +247,8 @@ TAP.test "function as pull-stream source", ( T ) ->
       debug data
       send data
     else
-      T.ok "function works as pull-stream source"
-      T.end()
+      T.succeed "function works as pull-stream source"
+      done()
       send null
   Ø PS.$show()
   Ø PS.$drain()
@@ -244,3 +256,8 @@ TAP.test "function as pull-stream source", ( T ) ->
   PS.pull pipeline...
   return null
 
+############################################################################################################
+unless module.parent?
+  # include = []
+  # @_prune()
+  @_main()

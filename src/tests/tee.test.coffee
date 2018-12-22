@@ -17,7 +17,7 @@ echo                      = CND.echo.bind CND
 PATH                      = require 'path'
 FS                        = require 'fs'
 OS                        = require 'os'
-TAP                       = require 'tap'
+test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
@@ -29,7 +29,7 @@ $pull_drain               = require 'pull-stream/sinks/drain'
 pull_through              = require 'pull-through'
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "tee (using pull-tee)", ( T ) ->
+@[ "tee (using pull-tee)" ] = ( T, done ) ->
   $tee              = require 'pull-tee'
   sink_0_path       = '/tmp/pipestreams-test-tee-0.txt'
   sink_1_path       = '/tmp/pipestreams-test-tee-1.txt'
@@ -41,9 +41,9 @@ TAP.test "tee (using pull-tee)", ( T ) ->
   sink_1_finished   = no
   sink_2_finished   = no
   #.........................................................................................................
-  $link       = ( linker )  -> PS.map    ( value  ) -> ( JSON.stringify value ) + linker
-  $keep_odd   =             -> PS.filter ( number ) -> number % 2 isnt 0
-  $keep_even  =             -> PS.filter ( number ) -> number % 2 is   0
+  $link       = ( linker )  -> PS.map     ( value  ) -> ( JSON.stringify value ) + linker
+  $keep_odd   =             -> PS.$filter ( number ) -> number % 2 isnt 0
+  $keep_even  =             -> PS.$filter ( number ) -> number % 2 is   0
   #.............'............................................................................................
   finish = ->
     if sink_0_finished then help "sink_0 finished" else warn "waiting for sink_0"
@@ -58,7 +58,7 @@ TAP.test "tee (using pull-tee)", ( T ) ->
     T.ok CND.equals ( FS.readFileSync sink_2_path, { encoding: 'utf-8', } ), '0+2+4+6+8+10+12+14+16+18+20+'
     # debug '30091', FS.readFileSync sink_1_path, { encoding: 'utf-8', }
     # debug '30091', FS.readFileSync sink_2_path, { encoding: 'utf-8', }
-    T.end()
+    done()
   #.........................................................................................................
   sink_0.on 'stop', => sink_0_finished = yes; finish()
   sink_1.on 'stop', => sink_1_finished = yes; finish()
@@ -89,7 +89,7 @@ TAP.test "tee (using pull-tee)", ( T ) ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "tee (using pipestreams)", ( T ) ->
+@[ "tee (using pipestreams)" ] = ( T, done ) ->
   sink_0_path       = '/tmp/pipestreams-test-tee-0.txt'
   sink_1_path       = '/tmp/pipestreams-test-tee-1.txt'
   sink_2_path       = '/tmp/pipestreams-test-tee-2.txt'
@@ -100,9 +100,9 @@ TAP.test "tee (using pipestreams)", ( T ) ->
   sink_1_finished   = no
   sink_2_finished   = no
   #.........................................................................................................
-  $link       = ( linker )  -> PS.map    ( value  ) -> ( JSON.stringify value ) + linker
-  $keep_odd   =             -> PS.filter ( number ) -> number % 2 isnt 0
-  $keep_even  =             -> PS.filter ( number ) -> number % 2 is   0
+  $link       = ( linker )  -> PS.map     ( value  ) -> ( JSON.stringify value ) + linker
+  $keep_odd   =             -> PS.$filter ( number ) -> number % 2 isnt 0
+  $keep_even  =             -> PS.$filter ( number ) -> number % 2 is   0
   #.............'............................................................................................
   finish = ->
     if sink_0_finished then help "sink_0 finished" else warn "waiting for sink_0"
@@ -117,7 +117,7 @@ TAP.test "tee (using pipestreams)", ( T ) ->
     T.ok CND.equals ( FS.readFileSync sink_2_path, { encoding: 'utf-8', } ), '0+2+4+6+8+10+12+14+16+18+20+'
     # debug '30091', FS.readFileSync sink_1_path, { encoding: 'utf-8', }
     # debug '30091', FS.readFileSync sink_2_path, { encoding: 'utf-8', }
-    T.end()
+    done()
   #.........................................................................................................
   sink_0.on 'stop', => sink_0_finished = yes; finish()
   sink_1.on 'stop', => sink_1_finished = yes; finish()
@@ -146,4 +146,8 @@ TAP.test "tee (using pipestreams)", ( T ) ->
   # pull ppline_1...
   #.........................................................................................................
   return null
+
+############################################################################################################
+unless module.parent?
+  test @
 

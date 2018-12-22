@@ -1,9 +1,11 @@
 
 ### Comparison with NodeJS Streams, Pull-Streams
 
-Here are a few points that highlight the reasons why I wrote PipeStreams (after
-writing [PipeDreams](https://github.com/loveencounterflow/pipedreams) which were
-built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
+Here are a few points that highlight the reasons why I wrote the PipeStreams
+library on top of [pull-stream](https://github.com/pull-stream/pull-stream)s
+(after writing [PipeDreams](https://github.com/loveencounterflow/pipedreams)
+which were built on top of [NodeJS
+Streams](https://nodejs.org/api/stream.html)):
 
 * The [basic API ideas of
   PipeDreams](https://github.com/loveencounterflow/pipedreams#the-remit-and-remit-async-methods)
@@ -25,17 +27,17 @@ built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
 
 * PipeDreams had some downsides, though; apart from some of the *complexities*
   of NodeJS streams that could not be entirely hidden, it also suffered from
-  their [*inherently mediocre performance
-  characteristics*](https://github.com/loveencounterflow/basic-stream-benchmarks):
-  the architecture of NodeJS streams is such that adding a transform to a
-  pipeline incurs a non-trivial run-time performance penalty, so much that **the
-  performance of NodejS streams pipelines with more than a very few steps will
-  be dominated by the number of steps, even if those steps are no-ops**; this at
-  least used to be the case at the time when I abandoned NodeJS streams and
-  turned to Pull-Streams. The whole idea of streams is to do one little thing at
-  a time and have those many little steps co-operate to accomplish a bigger
-  goal; an implementation with an unreasonable cost on adding steps ruins that
-  picture.
+  their inherently mediocre
+  [*performance*](https://github.com/loveencounterflow/basic-stream-benchmarks)
+  characteristics: the architecture of NodeJS streams is such that adding a
+  transform to a pipeline incurs a non-trivial run-time performance penalty, so
+  much that **the performance of NodejS streams pipelines with more than a very
+  few steps will be dominated by the number of steps, even if those steps are
+  no-ops**; this at least used to be the case at the time when I abandoned
+  NodeJS streams and turned to Pull-Streams. The whole idea of streams is to do
+  one little thing at a time and have those many little steps co-operate to
+  accomplish a bigger goal; an implementation with an unreasonable cost on
+  adding steps ruins that picture.
 
 * The underlying implementation of Pull-Streams is [hugely
   simpler](http://dominictarr.com/post/149248845122/pull-streams-pull-streams-are-a-very-simple)
@@ -55,7 +57,7 @@ built on top of [NodeJS Streams](https://nodejs.org/api/stream.html)):
   are to be preferred over a convoluted implementation (and API) that suffers
   from backward-compatibility pressures and maintains several parallel, mutually
   exclusive and ultimately superfluous modes of operation. In the case of NodeJS
-  streams, you have 'new style' vs 'old style' mode of operation: A switch that
+  streams, you have 'new style' vs 'old style' mode of operation, a switch that
   is done transparently based on what seemingly unrelated parts of the API you
   employ in what order. Next, you must decide whether you're dealing with
   'objects' or 'binary' data, a completely gratuitous difference: it's just

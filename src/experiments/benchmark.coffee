@@ -56,7 +56,7 @@ S.pass_through_count      = 0
 S.implementation          = 'pipestreams-map'
 # S.implementation          = 'pipestreams-remit'
 #...........................................................................................................
-TAP                       = require 'tap'
+test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
@@ -325,9 +325,9 @@ TAP.test "performance regression", ( T ) ->
       $show               = -> PS.map PRFLR.wrap '$show',           ( data    ) -> info rpr data; return data
 
   #.........................................................................................................
-  $filter_empty       = -> PS.filter PRFLR.wrap '$filter_empty',      ( line   ) -> line.length > 0
-  $filter_comments    = -> PS.filter PRFLR.wrap '$filter_comments',   ( line   ) -> not line.startsWith '#'
-  $filter_incomplete  = -> PS.filter PRFLR.wrap '$filter_incomplete', ( fields ) -> [ a, b, ] = fields; return a? or b?
+  $filter_empty       = -> PS.$filter PRFLR.wrap '$filter_empty',       ( line   ) -> line.length > 0
+  $filter_comments    = -> PS.$filter PRFLR.wrap '$filter_comments',    ( line   ) -> not line.startsWith '#'
+  $filter_incomplete  = -> PS.$filter PRFLR.wrap '$filter_incomplete',  ( fields ) -> [ a, b, ] = fields; return a? or b?
 
   #---------------------------------------------------------------------------------------------------------
   push input

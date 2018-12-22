@@ -17,7 +17,7 @@ echo                      = CND.echo.bind CND
 PATH                      = require 'path'
 FS                        = require 'fs'
 OS                        = require 'os'
-TAP                       = require 'tap'
+test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
@@ -25,11 +25,11 @@ PS                        = require '../..'
 
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "sample (p = 0)", ( T ) ->
+@[ "sample (p = 0)" ] = ( T, done ) ->
   probe             = Array.from '𠳬矗㒹兢林森𣡕𣡽𨲍騳𩥋驫𦣦臦𦣩𫇆'
   matcher           = ''
   source            = PS.new_value_source Array.from probe
-  on_stop           = PS.new_event_collector 'stop', -> T.end()
+  on_stop           = PS.new_event_collector 'stop', -> done()
   #.........................................................................................................
   pipeline = []
   pipeline.push source
@@ -45,11 +45,11 @@ TAP.test "sample (p = 0)", ( T ) ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "sample (p = 1)", ( T ) ->
+@[ "sample (p = 1)" ] = ( T, done ) ->
   probe             = '𠳬矗㒹兢林森𣡕𣡽𨲍騳𩥋驫𦣦臦𦣩𫇆'
   matcher           = probe
   source            = PS.new_value_source Array.from probe
-  on_stop           = PS.new_event_collector 'stop', -> T.end()
+  on_stop           = PS.new_event_collector 'stop', -> done()
   #.........................................................................................................
   pipeline = []
   pipeline.push source
@@ -65,11 +65,11 @@ TAP.test "sample (p = 1)", ( T ) ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "sample (1)", ( T ) ->
+@[ "sample (1)" ] = ( T, done ) ->
   probe             = '𠳬矗㒹兢林森𣡕𣡽𨲍騳𩥋驫𦣦臦𦣩𫇆'
   matcher           = '𠳬㒹森𣡽𨲍騳𩥋𦣦臦𦣩𫇆'
   source            = PS.new_value_source Array.from probe
-  on_stop           = PS.new_event_collector 'stop', -> T.end()
+  on_stop           = PS.new_event_collector 'stop', -> done()
   #.........................................................................................................
   pipeline = []
   pipeline.push source
@@ -81,3 +81,8 @@ TAP.test "sample (1)", ( T ) ->
   #.........................................................................................................
   PS.pull pipeline...
   return null
+
+############################################################################################################
+unless module.parent?
+  test @
+

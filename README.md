@@ -5,7 +5,7 @@
 
 # PipeStreams
 
-PipeStreams use (pull-stream)[https://github.com/pull-stream/pull-stream]s as infrastructure to realize
+PipeStreams use [pull-stream](https://github.com/pull-stream/pull-stream)s as infrastructure to realize
 rather performant streaming in NodeJS. The main purpose for PipeStreams is to facilitate the building of
 streaming applications; in other words: to provide a simple and clear API to minimize mental overhead.
 

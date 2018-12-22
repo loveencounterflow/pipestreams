@@ -35,17 +35,16 @@
   upstream and pass zero or more data items *d*<sub>*1*</sub>,
   *d*<sub>*2*</sub>,&nbsp;... down the stream, consecutively.
 
-In short one can say that in each stream, data comes out of a source,
-flows through a number of transforms $*f<sub>i</sub>*, and goes into some
-kind of sink. A **complete pipeline** has at least a source and a
-sink.
+In short one can say that in each stream, data comes out of a source, flows
+through a number of transforms `$f(), $g(), ...`, and goes into some kind of
+sink. A **complete pipeline** has at least a source and a sink.
 
-* By **streams** (symbolized as Σ) we mean the activity that occurs when a
-  complete pipeline has been 'activated', that is made start to process data.
-  So, technically, a 'stream' (a composite algorithm at work) is what a
-  'pipeline', once activated, does. In practice, the distinction is often
-  blurred, and one can, for example, just as well say that a particular event is
-  'coming down the stream' or 'coming down the pipeline'.
+* By **streams** we mean the activity that occurs when a complete pipeline has
+  been 'activated', that is made start to process data. So, technically, a
+  'stream' (a composite algorithm at work) is what a 'pipeline', once activated,
+  does. In practice, the distinction is often blurred, and one can, for example,
+  just as well say that a particular event is 'coming down the stream' or
+  'coming down the pipeline'.
 
 ### Equivalence Rules
 

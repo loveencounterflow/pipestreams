@@ -16,14 +16,14 @@ help                      = CND.get_logger 'help',      badge
 whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
-TAP                       = require 'tap'
+test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
 
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "generator as source: random numbers", ( T ) ->
+@[ "generator as source: random numbers" ] = ( T, done ) ->
   #.........................................................................................................
   pipeline      = []
   Ø             = ( x ) => pipeline.push x
@@ -44,9 +44,13 @@ TAP.test "generator as source: random numbers", ( T ) ->
       # T.ok section_count is expect_count
       send data
     else
-      T.end()
+      done()
       # send null
   Ø PS.$drain()
   #.........................................................................................................
   PS.pull pipeline...
+
+############################################################################################################
+unless module.parent?
+  test @
 

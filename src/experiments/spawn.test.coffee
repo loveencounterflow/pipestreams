@@ -43,9 +43,9 @@ TAP.test "spawn 1", ( T ) ->
   #.........................................................................................................
   pipeline = []
   pipeline.push source
-  pipeline.push PS.$watch ( data ) -> whisper '10901-1', rpr data
-  pipeline.push PS.filter ( data ) -> data[ 0 ] is 'stdout'
-  pipeline.push $         ( data, send ) -> send data[ 1 ]
+  pipeline.push PS.$watch   ( data ) -> whisper '10901-1', rpr data
+  pipeline.push PS.$filter  ( data ) -> data[ 0 ] is 'stdout'
+  pipeline.push $           ( data, send ) -> send data[ 1 ]
   # pipeline.push PS.$split()
   # pipeline.push PS.$show title: '==='
   pipeline.push PS.$collect()

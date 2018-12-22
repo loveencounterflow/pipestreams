@@ -16,14 +16,14 @@ help                      = CND.get_logger 'help',      badge
 whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
-TAP                       = require 'tap'
+test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
 
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "gliding window: basic functionality", ( T ) ->
+@[ "gliding window: basic functionality" ] = ( T, done ) ->
   #.........................................................................................................
   pipeline      = []
   Ø             = ( x ) => pipeline.push x
@@ -43,14 +43,14 @@ TAP.test "gliding window: basic functionality", ( T ) ->
       T.ok section_count is expect_count
       send data
     else
-      T.end()
+      done()
       # send null
   Ø PS.$drain()
   #.........................................................................................................
   PS.pull pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "gliding window: drop values", ( T ) ->
+@[ "gliding window: drop values" ] = ( T, done ) ->
   #.........................................................................................................
   pipeline      = []
   Ø             = ( x ) => pipeline.push x
@@ -69,14 +69,14 @@ TAP.test "gliding window: drop values", ( T ) ->
       T.ok CND.equals data, [ 0, 1, 3, 5, 7, 9 ]
       send data
     else
-      T.end()
+      done()
       # send null
   Ø PS.$drain()
   #.........................................................................................................
   PS.pull pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "gliding window: insert values", ( T ) ->
+@[ "gliding window: insert values" ] = ( T, done ) ->
   #.........................................................................................................
   pipeline      = []
   Ø             = ( x ) => pipeline.push x
@@ -94,13 +94,16 @@ TAP.test "gliding window: insert values", ( T ) ->
       T.ok CND.equals data, [ 0, 1, 2, 2, 3, 6, 4, 5, 10, 6, 7, 14, 8, 9, 18 ]
       send data
     else
-      T.end()
+      done()
       # send null
   Ø PS.$drain()
   #.........................................................................................................
   PS.pull pipeline...
 
 
+############################################################################################################
+unless module.parent?
+  test @
 
 
 

@@ -17,7 +17,7 @@ echo                      = CND.echo.bind CND
 PATH                      = require 'path'
 FS                        = require 'fs'
 OS                        = require 'os'
-TAP                       = require 'tap'
+test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
@@ -25,7 +25,7 @@ PS                        = require '../..'
 
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "tee and stop events", ( T ) ->
+@[ "tee and stop events" ] = ( T, done ) ->
   sink_0_path       = '/tmp/pipestreams-test-tee-0.txt'
   sink_1_path       = '/tmp/pipestreams-test-tee-1.txt'
   sink_2_path       = '/tmp/pipestreams-test-tee-2.txt'
@@ -36,9 +36,9 @@ TAP.test "tee and stop events", ( T ) ->
   sink_1_finished   = no
   sink_2_finished   = no
   #.........................................................................................................
-  $link       = ( linker )  -> PS.map    ( value  ) -> ( JSON.stringify value ) + linker
-  $keep_odd   =             -> PS.filter ( number ) -> number % 2 isnt 0
-  $keep_even  =             -> PS.filter ( number ) -> number % 2 is   0
+  $link       = ( linker )  -> PS.map     ( value  ) -> ( JSON.stringify value ) + linker
+  $keep_odd   =             -> PS.$filter ( number ) -> number % 2 isnt 0
+  $keep_even  =             -> PS.$filter ( number ) -> number % 2 is   0
   #.........................................................................................................
   finish = ->
     if sink_0_finished then help "sink_0 finished" else warn "waiting for sink_0"
@@ -53,7 +53,7 @@ TAP.test "tee and stop events", ( T ) ->
     T.ok CND.equals ( FS.readFileSync sink_2_path, { encoding: 'utf-8', } ), '0+2+4+6+8+10+12+14+16+18+20+'
     # debug '30091', FS.readFileSync sink_1_path, { encoding: 'utf-8', }
     # debug '30091', FS.readFileSync sink_2_path, { encoding: 'utf-8', }
-    T.end()
+    done()
   #.........................................................................................................
   sink_0.on 'stop', => sink_0_finished = yes; finish()
   sink_1.on 'stop', => sink_1_finished = yes; finish()
@@ -84,12 +84,12 @@ TAP.test "tee and stop events", ( T ) ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-TAP.test "tee and stop events, 'collective' API", ( T ) ->
+@[ "tee and stop events, 'collective' API" ] = ( T, done ) ->
   on_stop = PS.new_event_collector 'stop', ->
     T.ok CND.equals ( FS.readFileSync sink_0_path, { encoding: 'utf-8', } ), '0-1-2-3-4-5-6-7-8-9-10-11-12-13-14-15-16-17-18-19-20-'
     T.ok CND.equals ( FS.readFileSync sink_1_path, { encoding: 'utf-8', } ), '1*3*5*7*9*11*13*15*17*19*'
     T.ok CND.equals ( FS.readFileSync sink_2_path, { encoding: 'utf-8', } ), '0+2+4+6+8+10+12+14+16+18+20+'
-    T.end()
+    done()
   #.........................................................................................................
   sink_0_path       = '/tmp/pipestreams-test-tee-0.txt'
   sink_1_path       = '/tmp/pipestreams-test-tee-1.txt'
@@ -98,9 +98,9 @@ TAP.test "tee and stop events, 'collective' API", ( T ) ->
   sink_1            = on_stop.add PS.new_file_sink sink_1_path
   sink_2            = on_stop.add PS.new_file_sink sink_2_path
   #.........................................................................................................
-  $link       = ( linker )  -> PS.map    ( value  ) -> ( JSON.stringify value ) + linker
-  $keep_odd   =             -> PS.filter ( number ) -> number % 2 isnt 0
-  $keep_even  =             -> PS.filter ( number ) -> number % 2 is   0
+  $link       = ( linker )  -> PS.map     ( value  ) -> ( JSON.stringify value ) + linker
+  $keep_odd   =             -> PS.$filter ( number ) -> number % 2 isnt 0
+  $keep_even  =             -> PS.$filter ( number ) -> number % 2 is   0
   #.........................................................................................................
   ppline_1  = []
   ppline_1.push $keep_odd()
@@ -123,4 +123,8 @@ TAP.test "tee and stop events, 'collective' API", ( T ) ->
   #.........................................................................................................
   PS.pull ppline_0...
   return null
+
+############################################################################################################
+unless module.parent?
+  test @
 

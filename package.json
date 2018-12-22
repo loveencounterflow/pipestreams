@@ -47,7 +47,6 @@
   },
   "devDependencies": {
     "guy-test": "^1.3.3",
-    "performance-now": "^2.1.0",
-    "tap": "^12.1.1"
+    "performance-now": "^2.1.0"
   }
 }
