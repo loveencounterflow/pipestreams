@@ -78,7 +78,7 @@ on the NodeJS folks who have given us the great piece of software that is
 NodeJS**. But frankly, as much as I like NodeJS, I nowadays try to stay away
 from using the standard library's streams and event emitters. Let's just say not
 everything in the Nodejs stdlib that *could* conceivably be used in userland
-software built on that foundation *should* be used.
+software *should* be used.
 
 With that off the chest, let's move on to what PipeStreams claims to provide.
 
