@@ -22,9 +22,6 @@ echo                      = CND.echo.bind CND
 # suspend                   = require 'coffeenode-suspend'
 # step                      = suspend.step
 #...........................................................................................................
-# D                         = require 'pipedreams'
-# $                         = D.remit.bind D
-# $async                    = D.remit_async.bind D
 PS                        = require '../..'
 { $, $async, }            = PS
 assign                    = Object.assign
@@ -123,7 +120,7 @@ COLLATZ = provide_collatz.apply {}
   pipeline    = []
   #.........................................................................................................
   pipeline.push S.source
-  # pipeline.push PS.$watch ( d ) -> urge '37744-1', jr d
+  pipeline.push PS.$watch ( d ) -> urge '37744-1', jr d
   pipeline.push PS2.$unwrap_recycled()
   # # pipeline.push PS.$delay 0.25
   # pipeline.push PS.$defer()
@@ -147,19 +144,6 @@ COLLATZ = provide_collatz.apply {}
         send d
       return null
   #.........................................................................................................
-  # pipeline.push PS.$watch ( d ) -> help '37744-3', jr d
-  #.........................................................................................................
-  pipeline.push do ->
-    collector = []
-    return $ 'null', ( d, send ) ->
-      if d?
-        if select_all d, '!', 'number'
-          collector.push d.value
-        else
-          send d
-      else
-        send collector
-  #.........................................................................................................
   pipeline.push PS.$watch ( d ) -> help '37744-4', jr d
   pipeline.push PS.$drain -> help 'ok'
   PS.pull pipeline...
@@ -173,14 +157,14 @@ COLLATZ = provide_collatz.apply {}
 
 ############################################################################################################
 unless module.parent?
-  S = {}
-  send = @new_sender S
+  S     = {}
+  send  = @new_sender S
   urge '-----------'
   send 5
   send PS2.new_system_event 'collect'
   send 6
   send PS2.new_system_event 'collect'
-  # for n in [ 2 .. 3 ]
+  # for n in [ 2 .. 10 ]
   #   debug n
   #   do ( n ) ->
   #     send n
@@ -189,4 +173,4 @@ unless module.parent?
   #     urge '-----------'
   #   # # send.end()
   # # send PS2.new_system_event 'end'
-  # send.end()
+  send.end()
