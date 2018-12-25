@@ -1,0 +1,13 @@
+{
+  "version": 3,
+  "file": "pluck.js",
+  "sourceRoot": "../..",
+  "sources": [
+    "src/experiments/pluck.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA;EAAA;AAAA,MAAA;;EAEA,KAAA,GAAQ,QAAA,CAAE,CAAF,EAAK,GAAL,EAAU,QAAV,CAAA;AACN,QAAA;IAAA,CAAA,GAAI,CAAG,CAAA,GAAA;IACP,IAAgB,CAAA,KAAK,MAArB;MAAA,CAAA,GAAI,SAAJ;;IACA,OAAO,CAAG,CAAA,GAAA;AACV,WAAO;EAJD,EAFR;;;EASA,IAAC,CAAA,MAAD,GAAU,QAAA,CAAE,QAAF,CAAA;AACR,QAAA,EAAA,EAAA,IAAA,EAAA;IAAA,IAA0E,gBAA1E;MAAA,MAAM,IAAI,KAAJ,CAAU,CAAA,iCAAA,CAAA,CAAoC,GAAA,CAAI,QAAJ,CAApC,CAAA,CAAV,EAAN;;IACA,CAAA,CAAE,IAAF,CAAA,GAAY,QAAZ;IACA,IAA0E,YAA1E;MAAA,MAAM,IAAI,KAAJ,CAAU,CAAA,iCAAA,CAAA,CAAoC,GAAA,CAAI,QAAJ,CAApC,CAAA,CAAV,EAAN;;IACA,IAAqC,GAAG,CAAC,QAAJ,CAAa,IAAb,CAArC;MAAA,IAAA,GAAY,IAAI,CAAC,KAAL,CAAW,UAAX,EAAZ;;IACA,IAAA,CAAA,CAA0E,IAAI,CAAC,MAAL,GAAc,CAAxF,CAAA;MAAA,MAAM,IAAI,KAAJ,CAAU,CAAA,iCAAA,CAAA,CAAoC,GAAA,CAAI,QAAJ,CAApC,CAAA,CAAV,EAAN;;IACA,EAAA,0CAA+B;IAC/B,IAAO,EAAA,KAAQ,MAAR,IAAA,EAAA,KAAgB,QAAhB,IAAA,EAAA,KAA0B,KAAjC;MACE,MAAM,IAAI,KAAJ,CAAU,CAAA,+CAAA,CAAA,CAAkD,GAAA,CAAI,EAAJ,CAAlD,CAAA,CAAV,EADR;;IAEA,IAAG,EAAA,KAAM,MAAT;AACE,aAAO,IAAC,CAAA,GAAD,CAAK,CAAE,IAAF,CAAA,GAAA;AAAY,YAAA,CAAA,EAAA,GAAA,EAAA,GAAA,EAAA;AAAc;QAAA,KAAA,sCAAA;;uBAAZ,IAAM,CAAA,GAAA;QAAM,CAAA;;MAA1B,CAAL,EADT;;AAEA,WAAO,IAAC,CAAA,GAAD,CAAK,CAAE,IAAF,CAAA,GAAA;AACV,UAAA,CAAA,EAAA,CAAA,EAAA,GAAA,EAAA;MAAA,CAAA,GAAY,CAAA;MACY,KAAA,sCAAA;;QAAxB,CAAG,CAAA,GAAA,CAAH,GAAY,IAAM,CAAA,GAAA;MAAM;AACxB,aAAO;IAHG,CAAL;EAXC;AATV",
+  "sourcesContent": [
+    "\n#-----------------------------------------------------------------------------------------------------------\npluck = ( x, key, fallback ) ->\n  R = x[ key ]\n  R = fallback if R is undefined\n  delete x[ key ]\n  return R\n\n#-----------------------------------------------------------------------------------------------------------\n@$pluck = ( settings ) ->\n  throw new Error \"µ29303 need settings 'keys', got #{rpr settings}\" unless settings?\n  { keys, } = settings\n  throw new Error \"µ30068 need settings 'keys', got #{rpr settings}\" unless keys?\n  keys      = keys.split /,\\s*|\\s+/ if CND.isa_text keys\n  throw new Error \"µ30833 need settings 'keys', got #{rpr settings}\" unless keys.length > 0\n  as        = settings[ 'as' ] ? 'object'\n  unless as in [ 'list', 'object', 'pod', ]\n    throw new Error \"µ31598 expected 'list', 'object' or 'pod', got #{rpr as}\"\n  if as is 'list'\n    return @map ( data ) => ( data[ key ] for key in keys )\n  return @map ( data ) =>\n    Z         = {}\n    Z[ key ]  = data[ key ] for key in keys\n    return Z\n"
+  ]
+}
