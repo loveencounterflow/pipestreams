@@ -38,7 +38,7 @@ PS                        = require '../..'
 
 #-----------------------------------------------------------------------------------------------------------
 sort = ( values ) ->
-  ### TAINT should handle errors ###
+  ### TAINT should handle errors (?) ###
   return new Promise ( resolve, reject ) =>
     pipeline  = []
     pipeline.push PS.new_value_source values

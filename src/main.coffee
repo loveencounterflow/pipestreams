@@ -60,40 +60,50 @@ return_id                 = ( x ) -> x
 @new_value_source = ( values ) -> $values values
 
 #-----------------------------------------------------------------------------------------------------------
-@map_start = ( method ) ->
-  throw new Error "µ9413 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "µ10178 method arity #{arity} not implemented" unless ( arity = method.length ) is 0
-  is_first = yes
-  return @_map_errors ( data ) =>
-    if is_first
-      is_first = no
-      method()
-    return data
+@new_push_source = ->
+  ### Return a `pull-streams` `pushable`. Methods `push` and `end` will be bound to the instance
+  so they can be freely passed around. ###
+  R       = _new_push_source()
+  R.push  = R.push.bind R
+  R.end   = R.end.bind R
+  return R
 
-#-----------------------------------------------------------------------------------------------------------
-@map_stop = ( method ) ->
-  throw new Error "µ10943 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "µ11708 method arity #{arity} not implemented" unless ( arity = method.length ) is 0
-  return $pass_through return_id, ( abort ) ->
-    method()
-    return abort
 
-#-----------------------------------------------------------------------------------------------------------
-@map_first = ( method ) ->
-  throw new Error "µ12473 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "µ13238 method arity #{arity} not implemented" unless ( arity = method.length ) is 1
-  is_first = yes
-  return @_map_errors ( data ) =>
-    if is_first
-      is_first = no
-      method data
-    return data
+# #-----------------------------------------------------------------------------------------------------------
+# @map_start = ( method ) ->
+#   throw new Error "µ9413 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+#   throw new Error "µ10178 method arity #{arity} not implemented" unless ( arity = method.length ) is 0
+#   is_first = yes
+#   return _map_errors ( data ) =>
+#     if is_first
+#       is_first = no
+#       method()
+#     return data
 
-#-----------------------------------------------------------------------------------------------------------
-@map_last = ( method ) ->
-  throw new Error "µ14003 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "µ14768 method arity #{arity} not implemented" unless ( arity = method.length ) is 1
-  throw new Error 'meh'
+# #-----------------------------------------------------------------------------------------------------------
+# @map_stop = ( method ) ->
+#   throw new Error "µ10943 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+#   throw new Error "µ11708 method arity #{arity} not implemented" unless ( arity = method.length ) is 0
+#   return $pass_through return_id, ( abort ) ->
+#     method()
+#     return abort
+
+# #-----------------------------------------------------------------------------------------------------------
+# @map_first = ( method ) ->
+#   throw new Error "µ12473 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+#   throw new Error "µ13238 method arity #{arity} not implemented" unless ( arity = method.length ) is 1
+#   is_first = yes
+#   return _map_errors ( data ) =>
+#     if is_first
+#       is_first = no
+#       method data
+#     return data
+
+# #-----------------------------------------------------------------------------------------------------------
+# @map_last = ( method ) ->
+#   throw new Error "µ14003 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
+#   throw new Error "µ14768 method arity #{arity} not implemented" unless ( arity = method.length ) is 1
+#   throw new Error 'meh'
 
 #-----------------------------------------------------------------------------------------------------------
 @$filter = ( method ) ->
@@ -111,7 +121,7 @@ return_id                 = ( x ) -> x
     when 1 then null
     else throw new Error "µ17828 method arity #{arity} not implemented"
   #.........................................................................................................
-  return @_map_errors method
+  return _map_errors method
 
 #-----------------------------------------------------------------------------------------------------------
 @$ = @remit = ( hint, method ) ->
@@ -160,7 +170,7 @@ return_id                 = ( x ) -> x
   throw new Error "µ18219 method arity #{arity} not implemented" unless ( arity = method.length ) is 3
   pipeline = []
   #.........................................................................................................
-  pipeline.push @_$paramap ( d, handler ) =>
+  pipeline.push $paramap ( d, handler ) =>
     collector               = []
     collector[ unpack_sym ] = true
     #.......................................................................................................
@@ -196,33 +206,15 @@ return_id                 = ( x ) -> x
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
-@$pass            = -> @_map_errors     ( data ) => data
-#...........................................................................................................
-@$push_to_list    = ( collector ) -> @_map_errors ( data ) => collector.push  data; return data
-@$add_to_set      = ( collector ) -> @_map_errors ( data ) => collector.add   data; return data
-#...........................................................................................................
-@$count           = -> throw new Error "µ23183 not implemented"
-@$take            = $take
-
-#-----------------------------------------------------------------------------------------------------------
+@$pass = -> _map_errors ( data ) => data
 @$drain = ( on_end = null ) -> $pull_drain null, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 @$watch = ( method ) ->
-  return @_map_errors ( data ) =>
+  return _map_errors ( data ) =>
     method data
     return data
 
-#-----------------------------------------------------------------------------------------------------------
-### TAINT not sure how to call this / how to unify with the rest of the API ###
-@_$watch_null = ( method ) ->
-  on_each = ( data ) ->
-    method data
-    return null
-  on_stop = ( abort ) ->
-    method null
-    return null
-  return $pass_through on_each, on_stop
 #-----------------------------------------------------------------------------------------------------------
 @pull = ( methods... ) ->
   return @$pass() if methods.length is 0
