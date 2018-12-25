@@ -418,11 +418,12 @@ L = @
 do ->
   patterns  = [ '*.js', '!main.js', '!_*' ]
   settings  = { cwd: ( PATH.join __dirname ), deep: false, absolute: true, }
-  paths     = await glob patterns, settings
+  paths     = glob.sync patterns, settings
   #.........................................................................................................
   for path in paths
     module = require path
     for key, value of module
+      # debug '38833', "#{path}##{key}"
       continue if key.startsWith '_'
       throw new Error "duplicate key #{rpr key}" if L[ key ]?
       L[ key ] = value
