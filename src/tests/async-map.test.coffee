@@ -35,57 +35,57 @@ after = ( dts, f ) -> setTimeout f, dts * 1000
 
 #===========================================================================================================
 #
-#-----------------------------------------------------------------------------------------------------------
-@[ "async 1" ] = ( T, done ) ->
-  ok        = false
-  probe     = "abcdef"
-  matcher   =  "*a**b**c**d**e**f*"
-  pipeline  = []
-  pipeline.push PS.new_value_source Array.from probe
-  pipeline.push PS._$async_map ( d, handler ) ->
-    after ( Math.random() / 5 ), ->
-      handler null, '*' + d + '*'
-    return null
-  pipeline.push PS.$show()
-  pipeline.push PS.$join()
-  #.........................................................................................................
-  pipeline.push PS.$watch ( result ) ->
-    echo CND.gold jr [ probe, result, ]
-    T.eq result, matcher
-    ok = true
-  #.........................................................................................................
-  pipeline.push PS.$drain ->
-    T.fail "failed to pass test" unless ok
-    done()
-  #.........................................................................................................
-  PS.pull pipeline...
-  return null
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "async 1" ] = ( T, done ) ->
+#   ok        = false
+#   probe     = "abcdef"
+#   matcher   =  "*a**b**c**d**e**f*"
+#   pipeline  = []
+#   pipeline.push PS.new_value_source Array.from probe
+#   pipeline.push PS._$async_map ( d, handler ) ->
+#     after ( Math.random() / 5 ), ->
+#       handler null, '*' + d + '*'
+#     return null
+#   pipeline.push PS.$show()
+#   pipeline.push PS.$join()
+#   #.........................................................................................................
+#   pipeline.push PS.$watch ( result ) ->
+#     echo CND.gold jr [ probe, result, ]
+#     T.eq result, matcher
+#     ok = true
+#   #.........................................................................................................
+#   pipeline.push PS.$drain ->
+#     T.fail "failed to pass test" unless ok
+#     done()
+#   #.........................................................................................................
+#   PS.pull pipeline...
+#   return null
 
-#-----------------------------------------------------------------------------------------------------------
-@[ "async 1 paramap" ] = ( T, done ) ->
-  ok        = false
-  probe     = "abcdef"
-  matcher   =  "*a**b**c**d**e**f*"
-  pipeline  = []
-  pipeline.push PS.new_value_source Array.from probe
-  pipeline.push PS._$paramap ( d, handler ) ->
-    after ( Math.random() / 5 ), ->
-      handler null, '*' + d + '*'
-    return null
-  pipeline.push PS.$show()
-  pipeline.push PS.$join()
-  #.........................................................................................................
-  pipeline.push PS.$watch ( result ) ->
-    echo CND.gold jr [ probe, result, ]
-    T.eq result, matcher
-    ok = true
-  #.........................................................................................................
-  pipeline.push PS.$drain ->
-    T.fail "failed to pass test" unless ok
-    done()
-  #.........................................................................................................
-  PS.pull pipeline...
-  return null
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "async 1 paramap" ] = ( T, done ) ->
+#   ok        = false
+#   probe     = "abcdef"
+#   matcher   =  "*a**b**c**d**e**f*"
+#   pipeline  = []
+#   pipeline.push PS.new_value_source Array.from probe
+#   pipeline.push PS._$paramap ( d, handler ) ->
+#     after ( Math.random() / 5 ), ->
+#       handler null, '*' + d + '*'
+#     return null
+#   pipeline.push PS.$show()
+#   pipeline.push PS.$join()
+#   #.........................................................................................................
+#   pipeline.push PS.$watch ( result ) ->
+#     echo CND.gold jr [ probe, result, ]
+#     T.eq result, matcher
+#     ok = true
+#   #.........................................................................................................
+#   pipeline.push PS.$drain ->
+#     T.fail "failed to pass test" unless ok
+#     done()
+#   #.........................................................................................................
+#   PS.pull pipeline...
+#   return null
 
 #-----------------------------------------------------------------------------------------------------------
 $send_three = ->
