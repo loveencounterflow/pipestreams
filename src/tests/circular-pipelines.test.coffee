@@ -175,7 +175,7 @@ new_collatz_pipeline = ( S, handler ) ->
     send = new_collatz_pipeline S, handler
     for n in probe
       do ( n ) ->
-        send n
+        debug '84756', send n
         send PS2.new_system_event 'collect'
     send PS2.new_system_event 'call_back'
   #.........................................................................................................
