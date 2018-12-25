@@ -15,23 +15,13 @@ warn                      = CND.get_logger 'warn',      badge
 help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
-# #...........................................................................................................
-# PATH                      = require 'path'
-# OS                        = require 'os'
+#...........................................................................................................
+PATH                      = require 'path'
 FS                        = require 'fs'
 CP                        = require 'child_process'
 glob                      = require 'globby'
-### files, conversion from/to NodeJS push streams: ###
-### later
-new_file_source           = require 'pull-file'
-new_file_sink             = require 'pull-write-file'
-###
-STPS                      = require 'stream-to-pull-stream'
 #...........................................................................................................
-### stream creation: ###
 new_pushable              = require 'pull-pushable'
-#...........................................................................................................
-### transforms: ###
 $pull_split               = require 'pull-split'
 # $pull_stringify           = require 'pull-stringify'
 $pull_utf8_decoder        = require 'pull-utf8-decoder'
@@ -49,7 +39,7 @@ pull_cont                 = require 'pull-cont'
 @_$paramap                = require 'pull-paramap'
 unpack_sym                = Symbol 'unpack'
 # pull_infinite             = require 'pull-stream/sources/infinite'
-Event_emitter             = require 'eventemitter3'
+@_map_errors              = require './_map_errors'
 #...........................................................................................................
 after                     = ( dts, f ) -> setTimeout f, dts * 1000
 defer                     = setImmediate
@@ -63,59 +53,6 @@ pluck = ( x, key, fallback ) ->
 
 
 #===========================================================================================================
-# EVENTS AND EMITTERS
-#-----------------------------------------------------------------------------------------------------------
-@_new_event_emitter = ->
-  R               = new Event_emitter()
-  _emit           = R.emit.bind R
-  #.........................................................................................................
-  R.emit = ( event_name, P... ) ->
-    _emit '*',  event_name, P... unless event_name is '*'
-    _emit       event_name, P...
-  # #.........................................................................................................
-  # R.on = ( name, P... ) ->
-  #   # ### experimental: accept only 'namespaced' event names a la 'foo/bar' and known names
-  #   # so as to prevent accidental usage of bogus event names like `end`, `close`, `finish` etc: ###
-  #   # unless ( '/' in name ) or ( name is 'stop' )
-  #   #   throw new Error "µ1763 unknown event name #{rpr name}"
-  #   emitter.on name, P...
-  #.........................................................................................................
-  return R
-
-# original_map = require 'pull-stream/throughs/map'
-# @_map_errors = ( P... ) -> original_map P...
-
-### This is the original `pull-stream/throughs/map` implementation with the `try`/`catch` clause removed so
-all errors are thrown. This, until we find out how to properly handle errors the pull-streams way. Note
-that `_map_errors` behaves exactly like `pull-stream/throughs/filter` which tells me this shouldn't be
-too wrong. Also observe that while any library may require all errors to be given to a callback or
-somesuch, no library can really enforce that because not all client code may be wrapped, so I think
-we're stuck with throwing errors anyway. ###
-
-```
-var prop = require('pull-stream/util/prop')
-
-this._map_errors = function (mapper) {
-  if(!mapper) return return_id
-  mapper = prop(mapper)
-  return function (read) {
-    return function (abort, cb) {
-      read(abort, function (end, data) {
-        // try {
-        data = !end ? mapper(data) : null
-        // } catch (err) {
-        //   return read(err, function () {
-        //     return cb(err)
-        //   })
-        // }
-        cb(end, data)
-      })
-    }
-  }
-}
-```
-
-#===========================================================================================================
 # ISA METHODS
 #-----------------------------------------------------------------------------------------------------------
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
@@ -126,79 +63,6 @@ this._map_errors = function (mapper) {
 @_isa_writeonly_njs_stream  = ( x ) -> ( @_isa_njs_stream x ) and x.writable and not x.readable
 @_isa_duplex_njs_stream     = ( x ) -> ( @_isa_njs_stream x ) and x.readable and     x.writable
 
-
-#-----------------------------------------------------------------------------------------------------------
-# @_nodejs_input_to_pull_source = ( P... ) -> STPS.source P...
-
-
-#===========================================================================================================
-# READ FROM, WRITE TO FILES, NODEJS STREAMS
-#-----------------------------------------------------------------------------------------------------------
-@read_from_file = ( path, options ) ->
-  ### TAINT consider using https://pull-stream.github.io/#pull-file-reader instead ###
-  switch ( arity = arguments.length )
-    when 1 then null
-    when 2
-      if CND.isa_function options
-        [ path, options, on_stop, ] = [ path, null, options, ]
-    else throw new Error "µ9983 expected 1 or 2 arguments, got #{arity}"
-  #.........................................................................................................
-  return @read_from_nodejs_stream ( FS.createReadStream path, options )
-
-#-----------------------------------------------------------------------------------------------------------
-@write_to_file = ( path, options, on_stop ) ->
-  ### TAINT consider using https://pull-stream.github.io/#pull-write-file instead ###
-  ### TAINT code duplication ###
-  switch ( arity = arguments.length )
-    when 1 then null
-    when 2
-      if CND.isa_function options
-        [ path, options, on_stop, ] = [ path, null, options, ]
-    when 3
-    else throw new Error "µ9983 expected 1 to 3 arguments, got #{arity}"
-  #.........................................................................................................
-  return @write_to_nodejs_stream ( FS.createWriteStream path, options ), on_stop
-
-#-----------------------------------------------------------------------------------------------------------
-@read_from_nodejs_stream = ( stream ) ->
-  switch ( arity = arguments.length )
-    when 1 then null
-    else throw new Error "µ9983 expected 1 argument, got #{arity}"
-  #.........................................................................................................
-  return STPS.source stream, ( error ) -> finish error
-
-#-----------------------------------------------------------------------------------------------------------
-@write_to_nodejs_stream = ( stream, on_stop ) ->
-  ### TAINT code duplication ###
-  switch ( arity = arguments.length )
-    when 1, 2 then null
-    else throw new Error "µ9983 expected 1 or 2 arguments, got #{arity}"
-  #.........................................................................................................
-  if on_stop? and ( ( type = CND.type_of on_stop ) isnt 'function' )
-    throw new Error "µ9383 expected a function, got a #{type}"
-  #.........................................................................................................
-  has_finished = false
-  #.........................................................................................................
-  finish = ( error ) ->
-    ### In case there was an error, throw that error if we already called on_stop, or there is no
-    callback given; this is to prevent silent failures: ###
-    if error? and ( has_finished or ( not on_stop? ) )
-      has_finished = true
-      throw error
-    #.......................................................................................................
-    ### Otherwise, call back (with optional error) only in case we have not yet finished; this is to
-    prevent inadvertently calling back more than once: ###
-    if not has_finished
-      has_finished = true
-      if on_stop?
-        debug '39983'
-        return on_stop error if error?
-        return on_stop()
-    #.......................................................................................................
-    return null
-  #.........................................................................................................
-  stream.on 'close', -> finish()
-  return STPS.sink stream, ( error ) -> finish error
 
 
 #===========================================================================================================
