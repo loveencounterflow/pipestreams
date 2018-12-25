@@ -82,53 +82,6 @@ pluck = ( x, key, fallback ) ->
   #.........................................................................................................
   return R
 
-#-----------------------------------------------------------------------------------------------------------
-@new_event_collector = ( for_event_name, method ) ->
-  switch arity = arguments.length
-    when 0 then null
-    when 2
-      unless ( type = CND.type_of for_event_name ) is 'text'
-        throw new Error "µ2528 expected a text, got a #{type}"
-      unless ( type = CND.type_of method ) is 'function'
-        throw new Error "µ3293 expected a function, got a #{type}"
-    else throw new Error "µ4058 expected 0 or 2 arguments, got #{arity}"
-  #.........................................................................................................
-  R               = @_new_event_emitter()
-  R._event_counts = {}
-  R._source_count = 0
-  R._emitters     = new WeakMap()
-  #.........................................................................................................
-  aggregator = ( event_name ) ->
-    event_count = R._event_counts[ event_name ] = ( R._event_counts[ event_name ] ? 0 ) + 1
-    R.emit event_name if event_count is R._source_count
-    return null
-  #.........................................................................................................
-  R.add = ( emitter ) ->
-    ### TAINT only works with PipeStreams event emitters; could overwrite `emit` method otherwise ###
-    unless ( type = CND.type_of emitter.on ) is 'function'
-      throw new Error "µ4823 expected an event emitter with an `on` method, got a #{type}"
-    throw new Error "µ5588 got duplicate emitter" if R._emitters.has emitter
-    R._emitters.set emitter, 1
-    R._source_count += +1
-    emitter.on '*', aggregator
-    return emitter
-  #.........................................................................................................
-  R.on for_event_name, method if method?
-  return R
-
-#-----------------------------------------------------------------------------------------------------------
-@_mixin_event_emitter = ( method ) ->
-  emitter = @_new_event_emitter()
-  #.........................................................................................................
-  method.on = ( event_name, P... ) ->
-    emitter.on event_name, P...
-  #.........................................................................................................
-  method.emit = ( event_name, P... ) ->
-    emitter.emit event_name, P...
-  #.........................................................................................................
-  return method
-
-
 # original_map = require 'pull-stream/throughs/map'
 # @_map_errors = ( P... ) -> original_map P...
 
