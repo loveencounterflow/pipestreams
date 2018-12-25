@@ -6,7 +6,7 @@
   "scripts": {
     "build": "coffee --map -o lib -c src",
     "doctoc": "doctoc README.md",
-    "test": "npm run build && tap --harmony lib/tests/*.js"
+    "test": "npm run build && node lib/tests/main.js"
   },
   "repository": {
     "type": "git",
@@ -27,8 +27,6 @@
   "homepage": "https://github.com/loveencounterflow/pipestreams",
   "dependencies": {
     "cnd": "^4.4.0",
-    "coffeenode-suspend": "^0.1.11",
-    "eventemitter3": "^3.1.0",
     "glob": "^7.1.3",
     "numeral": "^2.0.6",
     "pull-cont": "^0.1.1",
@@ -47,7 +45,6 @@
     "timsort": "^0.3.0"
   },
   "devDependencies": {
-    "guy-test": "^1.3.3",
-    "performance-now": "^2.1.0"
+    "guy-test": "^1.3.3"
   }
 }
