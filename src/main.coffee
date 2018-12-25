@@ -57,12 +57,6 @@ return_id                 = ( x ) -> x
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
-### TAINT refactor: `PS.new_source.from_path`, `PS.new_source.from_text`..., `PS.new_sink.as_text` (???) ###
-@new_text_source = ( text ) -> $values [ text, ]
-@new_text_sink = ->
-  throw new Error "µ8648 not implemented"
-
-#-----------------------------------------------------------------------------------------------------------
 @new_value_source = ( values ) -> $values values
 
 #-----------------------------------------------------------------------------------------------------------
@@ -204,11 +198,6 @@ return_id                 = ( x ) -> x
 #-----------------------------------------------------------------------------------------------------------
 @$pass            = -> @_map_errors     ( data ) => data
 #...........................................................................................................
-@$as_line         = -> @_map_errors     ( line    ) => line + '\n'
-@$trim            = -> @_map_errors     ( line    ) => line.trim()
-@$split_fields    = -> @_map_errors     ( line    ) => line.split /\s*\t\s*/
-@$skip_empty      = -> @$filter         ( line    ) => line.length > 0
-#...........................................................................................................
 @$push_to_list    = ( collector ) -> @_map_errors ( data ) => collector.push  data; return data
 @$add_to_set      = ( collector ) -> @_map_errors ( data ) => collector.add   data; return data
 #...........................................................................................................
@@ -234,34 +223,6 @@ return_id                 = ( x ) -> x
     method null
     return null
   return $pass_through on_each, on_stop
-
-#-----------------------------------------------------------------------------------------------------------
-@$name_fields = ( names ) ->
-  throw new Error "µ23948 expected a list, got a #{type}" unless ( type = CND.type_of names ) is 'list'
-  return @_map_errors ( fields ) =>
-    throw new Error "µ24713 expected a list, got a #{type}" unless ( type = CND.type_of fields ) is 'list'
-    R = {}
-    for value, idx in fields
-      name      = names[ idx ] ?= "field_#{idx}"
-      R[ name ] = value
-    return R
-
-#-----------------------------------------------------------------------------------------------------------
-@$trim_fields = -> @$watch ( fields  ) =>
-  fields[ idx ] = field.trim() for field, idx in fields
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
-@$split_tsv = ->
-  R = []
-  R.push @$split()
-  R.push @$trim()
-  R.push @$skip_empty()
-  R.push @$filter ( line ) -> not line.startsWith '#'
-  R.push @$split_fields()
-  # R.push @$trim_fields()
-  return @pull R...
-
 #-----------------------------------------------------------------------------------------------------------
 @pull = ( methods... ) ->
   return @$pass() if methods.length is 0
@@ -269,47 +230,6 @@ return_id                 = ( x ) -> x
     continue if ( type = CND.type_of method ) is 'function'
     throw new Error "µ25478 expected a function, got a #{type} for argument # #{idx + 1}"
   return pull methods...
-
-#-----------------------------------------------------------------------------------------------------------
-@$split = ( settings ) ->
-  throw new Error "µ26243 MEH" if settings?
-  R         = []
-  matcher   = null
-  mapper    = null
-  reverse   = no
-  skip_last = yes
-  R.push $pull_utf8_decoder()
-  R.push $pull_split matcher, mapper, reverse, skip_last
-  return pull R...
-
-#-----------------------------------------------------------------------------------------------------------
-@$join = ( joiner = null ) ->
-  collector = []
-  length    = 0
-  type      = null
-  is_first  = yes
-  return @$ 'null', ( data, send ) ->
-    if data?
-      if is_first
-        is_first  = no
-        type      = CND.type_of data
-        switch type
-          when 'text'
-            joiner ?= ''
-          when 'buffer'
-            throw new Error "µ27008 joiner not supported for buffers, got #{rpr joiner}" if joiner?
-          else
-            throw new Error "µ27773 expected a text or a buffer, got a #{type}"
-      else
-        unless ( this_type = CND.type_of data ) is type
-          throw new Error "µ28538 expected a #{type}, got a #{this_type}"
-      length += data.length
-      collector.push data
-    else
-      return send '' if ( collector.length is 0 ) or ( length is 0 )
-      return send collector.join '' if type is 'text'
-      return send Buffer.concat collector, length
-    return null
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -363,21 +283,6 @@ return_id                 = ( x ) -> x
   title     = settings?[ 'title'      ] ? '-->'
   serialize = settings?[ 'serialize'  ] ? JSON.stringify
   return @$watch ( data ) => info title, serialize data
-
-#-----------------------------------------------------------------------------------------------------------
-@$as_text = ( settings ) ->
-  serialize = settings?[ 'serialize' ] ? JSON.stringify
-  return @_map_errors ( data ) => serialize data
-
-#-----------------------------------------------------------------------------------------------------------
-@$stringify = ( settings ) -> $stringify settings
-
-#-----------------------------------------------------------------------------------------------------------
-@$desaturate = ->
-  ### remove ANSI escape sequences ###
-  pattern = /\x1b\[[0-9;]*[JKmsu]/g
-  return @map ( line ) =>
-    return line.replace pattern, ''
 
 
 #===========================================================================================================
