@@ -22,7 +22,6 @@ echo                      = CND.echo.bind CND
 PS                        = require '../..'
 { $, $async, }            = PS
 rprx                      = ( d ) -> "#{d.sigil} #{d.key}:: #{jr d.value ? null} #{jr d.stamped ? false}"
-_new_push_source          = require 'pull-pushable'
 #...........................................................................................................
 { is_empty
   copy
@@ -156,15 +155,6 @@ $         := pod                    # system-level attributes, to be copied from
 @is_sync = ( d ) ->
   ### Return whether event is a recycling wrapper event. ###
   return ( d.sigil is '~' ) and ( d.key is 'sync' )
-
-#-----------------------------------------------------------------------------------------------------------
-@new_push_source = ->
-  ### Return a `pull-streams` `pushable`. Methods `push` and `end` will be bound to the instance
-  so they can be freely passed around. ###
-  R       = _new_push_source()
-  R.push  = R.push.bind R
-  R.end   = R.end.bind R
-  return R
 
 # #-----------------------------------------------------------------------------------------------------------
 # @new_sync_helpers = ->

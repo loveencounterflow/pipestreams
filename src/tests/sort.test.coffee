@@ -23,7 +23,6 @@ test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
 { $, $async, }            = PS
-PS2                       = require '../experiments/recycle'
 
 #-----------------------------------------------------------------------------------------------------------
 @_prune = ->
@@ -59,7 +58,7 @@ sort = ( values ) ->
     [ [ 'a', 'z', 'foo' ], [ 'a', 'foo', 'z' ] ]
     ]
   count     = probes_and_matchers.length
-  source    = PS2.new_push_source()
+  source    = PS.new_push_source()
   #.........................................................................................................
   for [ probe, matcher, ] in probes_and_matchers
     result = await sort probe
@@ -77,7 +76,7 @@ sort = ( values ) ->
     [["a",1,"z","foo"],null,"unable to compare a number to a text"]
     ]
   count     = probes_and_matchers.length
-  source    = PS2.new_push_source()
+  source    = PS.new_push_source()
   #.........................................................................................................
   for [ probe, matcher, pattern, ] in probes_and_matchers
     regex = if pattern? then ( new RegExp pattern ) else null
