@@ -20,7 +20,7 @@ echo                      = CND.echo.bind CND
 # OS                        = require 'os'
 FS                        = require 'fs'
 CP                        = require 'child_process'
-#...........................................................................................................
+glob                      = require 'globby'
 ### files, conversion from/to NodeJS push streams: ###
 ### later
 new_file_source           = require 'pull-file'
