@@ -635,12 +635,23 @@ this._map_errors = function (mapper) {
       return send record
     send record if rnd() < p
 
-
 ############################################################################################################
+### Gather methods from submodules, bind all methods ###
 L = @
 do ->
+  patterns  = [ '*.js', '!main.js', '!_*' ]
+  settings  = { cwd: ( PATH.join __dirname ), deep: false, absolute: true, }
+  paths     = await glob patterns, settings
+  #.........................................................................................................
+  for path in paths
+    module = require path
+    for key, value of module
+      continue if key.startsWith '_'
+      throw new Error "duplicate key #{rpr key}" if L[ key ]?
+      L[ key ] = value
+  #.........................................................................................................
   for key, value of L
     continue unless CND.isa_function value
     L[ key ] = value.bind L
-
+  return null
 
