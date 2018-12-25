@@ -128,56 +128,81 @@ this._map_errors = function (mapper) {
 
 
 #-----------------------------------------------------------------------------------------------------------
-@_nodejs_input_to_pull_source = ( P... ) -> STPS.source P...
+# @_nodejs_input_to_pull_source = ( P... ) -> STPS.source P...
 
-#-----------------------------------------------------------------------------------------------------------
-### TAINT consider using
-  https://pull-stream.github.io/#pull-file-reader,
-  https://pull-stream.github.io/#pull-write-file
-  instead ###
-@new_file_source              = ( P... ) -> @_new_file_source_using_stps      P...
-@new_file_sink                = ( P... ) -> @_new_file_sink_using_stps        P...
-@_new_file_source_using_stps  = ( P... ) -> STPS.source FS.createReadStream   P...
 
+#===========================================================================================================
+# READ FROM, WRITE TO FILES, NODEJS STREAMS
 #-----------------------------------------------------------------------------------------------------------
-@_new_file_sink_using_stps = ( path_or_stream ) ->
-  if CND.isa_text path_or_stream
-    path    = path_or_stream
-    stream  = FS.createWriteStream path_or_stream
-  else
-    path    = path_or_stream.path ? '<UNKNOWN PATH>'
-    unless @_isa_njs_stream path_or_stream
-      throw new Error "µ6353 expected a path or a stream, got a #{CND.type_of path_or_stream}"
-    unless path_or_stream.writable
-      throw new Error "µ7118 expected a path or a stream, got a #{CND.type_of path_or_stream}"
-    stream  = path_or_stream
-  ### TAINT intermediate solution ###
-  R       = STPS.sink stream, ( error ) => throw error if error?
-  emitter = @_new_event_emitter()
-  R.on    = ( name, P... ) -> emitter.on name, P...
+@read_from_file = ( path, options ) ->
+  ### TAINT consider using https://pull-stream.github.io/#pull-file-reader instead ###
+  switch ( arity = arguments.length )
+    when 1 then null
+    when 2
+      if CND.isa_function options
+        [ path, options, on_stop, ] = [ path, null, options, ]
+    else throw new Error "µ9983 expected 1 or 2 arguments, got #{arity}"
   #.........................................................................................................
-  stream.on 'finish', ->
-    if ( not emitter.listeners 'stop', true ) and ( not emitter.listeners '*', true )
-      warn "stream to #{rpr path} finished without listener"
-    emitter.emit 'stop'
+  return @read_from_nodejs_stream ( FS.createReadStream path, options )
+
+#-----------------------------------------------------------------------------------------------------------
+@write_to_file = ( path, options, on_stop ) ->
+  ### TAINT consider using https://pull-stream.github.io/#pull-write-file instead ###
+  ### TAINT code duplication ###
+  switch ( arity = arguments.length )
+    when 1 then null
+    when 2
+      if CND.isa_function options
+        [ path, options, on_stop, ] = [ path, null, options, ]
+    when 3
+    else throw new Error "µ9983 expected 1 to 3 arguments, got #{arity}"
   #.........................................................................................................
-  return R
-
-
-### later (perhaps)
-#-----------------------------------------------------------------------------------------------------------
-@_new_file_source_using_pullfile  = ( P... ) -> new_file_source P...
+  return @write_to_nodejs_stream ( FS.createWriteStream path, options ), on_stop
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_file_sink_using_pwf = ( path, options = null ) ->
-  throw new Error "µ7883 not implemented"
-  # TAINT errors with "DeprecationWarning: Calling an asynchronous function without callback is deprecated." (???)
-  options ?= {}
-  return new_file_sink path, options, ( error ) ->
-    throw error if error?
+@read_from_nodejs_stream = ( stream ) ->
+  switch ( arity = arguments.length )
+    when 1 then null
+    else throw new Error "µ9983 expected 1 argument, got #{arity}"
+  #.........................................................................................................
+  return STPS.source stream, ( error ) -> finish error
+
+#-----------------------------------------------------------------------------------------------------------
+@write_to_nodejs_stream = ( stream, on_stop ) ->
+  ### TAINT code duplication ###
+  switch ( arity = arguments.length )
+    when 1, 2 then null
+    else throw new Error "µ9983 expected 1 or 2 arguments, got #{arity}"
+  #.........................................................................................................
+  if on_stop? and ( ( type = CND.type_of on_stop ) isnt 'function' )
+    throw new Error "µ9383 expected a function, got a #{type}"
+  #.........................................................................................................
+  has_finished = false
+  #.........................................................................................................
+  finish = ( error ) ->
+    ### In case there was an error, throw that error if we already called on_stop, or there is no
+    callback given; this is to prevent silent failures: ###
+    if error? and ( has_finished or ( not on_stop? ) )
+      has_finished = true
+      throw error
+    #.......................................................................................................
+    ### Otherwise, call back (with optional error) only in case we have not yet finished; this is to
+    prevent inadvertently calling back more than once: ###
+    if not has_finished
+      has_finished = true
+      if on_stop?
+        debug '39983'
+        return on_stop error if error?
+        return on_stop()
+    #.......................................................................................................
     return null
-###
+  #.........................................................................................................
+  stream.on 'close', -> finish()
+  return STPS.sink stream, ( error ) -> finish error
 
+
+#===========================================================================================================
+#
 #-----------------------------------------------------------------------------------------------------------
 ### TAINT refactor: `PS.new_source.from_path`, `PS.new_source.from_text`..., `PS.new_sink.as_text` (???) ###
 @new_text_source = ( text ) -> $values [ text, ]

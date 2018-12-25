@@ -27,6 +27,8 @@ $take                     = require 'pull-stream/throughs/take'
 $values                   = require 'pull-stream/sources/values'
 $pull_drain               = require 'pull-stream/sinks/drain'
 pull_through              = require 'pull-through'
+#...........................................................................................................
+read                      = ( path ) -> FS.readFileSync path, { encoding: 'utf-8', }
 
 #-----------------------------------------------------------------------------------------------------------
 @_prune = ->
@@ -209,16 +211,16 @@ pull_through              = require 'pull-through'
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "wrap FS object for sink" ] = ( T, done ) ->
-  output_path = '/tmp/pipestreams-test-output.txt'
-  output_file = FS.createWriteStream output_path
-  sink        = PS.new_file_sink output_file
-  pipeline = []
+  output_path   = '/tmp/pipestreams-test-output.txt'
+  output_stream = FS.createWriteStream output_path
+  sink          = PS.write_to_nodejs_stream output_stream #, ( error ) -> debug '37783', error
+  pipeline      = []
   pipeline.push $values Array.from 'abcdef'
   pipeline.push PS.$show()
   pipeline.push sink
   pull pipeline...
-  output_file.on 'finish', =>
-    T.ok CND.equals 'abcdef', FS.readFileSync output_path, { encoding: 'utf-8', }
+  output_stream.on 'finish', =>
+    T.ok CND.equals 'abcdef', read output_path
     done()
 
 #-----------------------------------------------------------------------------------------------------------
