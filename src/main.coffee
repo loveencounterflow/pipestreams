@@ -311,7 +311,6 @@ do ->
   for path in paths
     module = require path
     for key, value of module
-      # debug '38833', "#{path}##{key}"
       continue if key.startsWith '_'
       throw new Error "duplicate key #{rpr key}" if L[ key ]?
       L[ key ] = value
@@ -319,5 +318,6 @@ do ->
   for key, value of L
     continue unless CND.isa_function value
     L[ key ] = value.bind L
+  #.........................................................................................................
   return null
 
