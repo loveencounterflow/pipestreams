@@ -1,16 +1,18 @@
 
 ### Comparison with NodeJS Streams, Pull-Streams
 
-> Note: Whatever is said here about
-> [PipeDreams](https://github.com/loveencounterflow/pipedreams) applies *only*
-> to versions < 7.0.0 of that library, *not* to newer ones, which are built on
-> top of [PipeStreams](https://github.com/loveencounterflow/pipestreams) and are
-> a different beast altogether. To clarify that, I write 'Old PipeDreams' in the
+> Note: Whatever is said here about [PipeDreams
+> (https://github.com/loveencounterflow/pipedreams)](https://github.com/loveencounterflow/pipedreams)
+> applies *only* to versions < 7.0.0 of that library (for which see
+> https://github.com/loveencounterflow/pipedreams/tree/v6.3.0), *not* to newer
+> ones, which are built on top of
+> [PipeStreams](https://github.com/loveencounterflow/pipestreams) and are a
+> different beast altogether. To clarify that, I write 'Old PipeDreams' in the
 > below.
 
 Here are a few points that highlight the reasons why I wrote the PipeStreams
 library on top of [pull-stream](https://github.com/pull-stream/pull-stream)s
-(after writing [Old PipeDreams](https://github.com/loveencounterflow/pipedreams)
+(after writing [Old PipeDreams](https://github.com/loveencounterflow/pipedreams/tree/v6.3.0)
 which were built on top of [NodeJS
 Streams](https://nodejs.org/api/stream.html)):
 
