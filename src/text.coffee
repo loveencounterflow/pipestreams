@@ -7,7 +7,6 @@ CND                       = require 'cnd'
 $pull_split               = require 'pull-split'
 $pull_utf8_decoder        = require 'pull-utf8-decoder'
 
-
 #-----------------------------------------------------------------------------------------------------------
 @new_text_source = ( text ) -> $values [ text, ]
 
