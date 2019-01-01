@@ -171,11 +171,13 @@ return_id                 = ( x ) -> x
   pipeline = []
   #.........................................................................................................
   pipeline.push $paramap ( d, handler ) =>
-    collector               = []
-    collector[ unpack_sym ] = true
+    collector = null
     #.......................................................................................................
     send = ( d ) =>
       return handler true if d is null
+      unless collector?
+        collector               = []
+        collector[ unpack_sym ] = true
       collector.push d
       return null
     #.......................................................................................................
