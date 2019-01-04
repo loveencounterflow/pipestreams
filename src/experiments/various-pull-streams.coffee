@@ -81,16 +81,24 @@ demo_merge_async_sources = ->
     return null
 
 #-----------------------------------------------------------------------------------------------------------
-demo_mux_async_sources = ->
-  mux       = require 'pull-mux'
-  source_1  = new_async_source 's1'
-  source_2  = new_async_source 's2'
-  $demux    = -> PS.$map ( [ k, v, ] ) -> v
-  # $demux    = $ ( [ k, v, ], send ) -> send v
+demo_mux_async_sources_1 = ->
+  mux = require 'pull-mux'
+  #.........................................................................................................
+  $_mux = ( sources... ) ->
+    R = {}
+    for source, idx in sources
+      R[ idx ] = source
+    return mux R
+  #.........................................................................................................
+  $_demux = ->
+    return PS.$map ( [ k, v, ] ) -> v
+  #.........................................................................................................
   return new Promise ( resolve ) ->
     pipeline  = []
-    pipeline.push mux { s1: source_1, s2: source_2, }
-    pipeline.push $demux()
+    source_1  = new_async_source 's1'
+    source_2  = new_async_source 's2'
+    pipeline.push $_mux source_1, source_2
+    pipeline.push $_demux()
     pipeline.push PS.$collect()
     pipeline.push PS.$watch ( d ) -> help '-->', jr d
     pipeline.push PS.$drain ->
@@ -103,6 +111,53 @@ demo_mux_async_sources = ->
     after 0.2, -> source_2.push 5
     after 0.3, -> source_2.push 6
     after 0.4, -> source_1.push 1
+    after 0.4, -> source_1.push 1
+    after 0.4, -> source_1.push 1
+    after 0.4, -> source_1.push 1
+    after 0.05, -> source_2.push 42
+    after 1.0, -> source_1.end()
+    after 1.0, -> source_2.end()
+    return null
+
+#-----------------------------------------------------------------------------------------------------------
+demo_mux_async_sources_2 = ->
+  mux = require 'pull-mux'
+  #-----------------------------------------------------------------------------------------------------------
+  PS.$wye = ( sources... ) ->
+    #.........................................................................................................
+    $_mux = ( sources... ) ->
+      R = {}
+      R[ idx ] = source for source, idx in sources
+      return mux R
+    #.........................................................................................................
+    $_demux = -> PS.$map ( [ k, v, ] ) -> v
+    #.........................................................................................................
+    pipeline  = []
+    pipeline.push $_mux sources...
+    pipeline.push $_demux()
+    return PS.pull pipeline...
+  #.........................................................................................................
+  return new Promise ( resolve ) ->
+    pipeline  = []
+    source_1  = new_async_source 's1'
+    source_2  = new_async_source 's2'
+    pipeline.push PS.$wye source_1, source_2
+    pipeline.push PS.$collect()
+    pipeline.push PS.$watch ( d ) -> help '-->', jr d
+    pipeline.push PS.$drain ->
+      help 'ok'
+      resolve null
+    PS.pull pipeline...
+    after 0.1, -> source_2.push 4
+    after 0.5, -> source_1.push 2
+    after 0.6, -> source_1.push 3
+    after 0.2, -> source_2.push 5
+    after 0.3, -> source_2.push 6
+    after 0.4, -> source_1.push 1
+    after 0.4, -> source_1.push 1
+    after 0.4, -> source_1.push 1
+    after 0.4, -> source_1.push 1
+    after 0.05, -> source_2.push 42
     after 1.0, -> source_1.end()
     after 1.0, -> source_2.end()
     return null
@@ -111,5 +166,6 @@ demo_mux_async_sources = ->
 unless module.parent?
   # demo_merge_1()
   # demo_merge_async_sources()
-  demo_mux_async_sources()
+  # demo_mux_async_sources_1()
+  demo_mux_async_sources_2()
 
