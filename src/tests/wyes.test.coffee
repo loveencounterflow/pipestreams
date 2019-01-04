@@ -22,6 +22,7 @@ test                      = require 'guy-test'
 PS                        = require '../..'
 { $, $async, }            = PS
 #...........................................................................................................
+{ jr }                    = CND
 
 # https://pull-stream.github.io/#pull-through
 
@@ -32,74 +33,43 @@ PS                        = require '../..'
 
 
 #-----------------------------------------------------------------------------------------------------------
-f = ->
+provide_$wye = ->
+  mux = require 'pull-mux' ### https://github.com/nichoth/pull-mux ###
+
+  #-----------------------------------------------------------------------------------------------------------
+  @$merge = ( sources... ) ->
+    #.........................................................................................................
+    $_mux = ( sources... ) =>
+      R = {}
+      R[ idx ] = source for source, idx in sources
+      return mux R
+    #.........................................................................................................
+    $_demux = => @$map ( [ k, v, ] ) -> v
+    #.........................................................................................................
+    pipeline  = []
+    pipeline.push $_mux sources...
+    pipeline.push $_demux()
+    return @pull pipeline...
 
   #-----------------------------------------------------------------------------------------------------------
   @$wye = ( bysource ) ->
-    ### NOTE: what is called (main-, by-) 'stream' here is called 'pipeline' elsewhere. The `mainstream`
-    is really a stream transform, a.k.a. a through stream. ###
-    mainstream_end_sym    = Symbol 'mainstream_end'
-    bystream_end_sym      = Symbol 'bystream_end'
-    mainstream_has_ended  = false
-    # bystream_has_ended    = false
-    bystream_started      = false
-    mainstream            = []
-    bystream              = []
-    mainstream_send       = null
-    bystream_buffer       = []
-    #.........................................................................................................
-    bystream.push bysource
-    bystream.push @$ 'null', ( d, send ) ->
-      d ?= bystream_end_sym
-      if mainstream_send?
-        mainstream_send bystream_buffer.pop() while bystream_buffer.length > 0
-        mainstream_send d
-      else
-        bystream_buffer.unshift d
-      return null
-    bystream.push @$drain()
-    #.........................................................................................................
-    ### TAINT this step is necessary because `PS.$async 'null', $f` is not implemented ###
-    mainstream.push @$ 'null', ( d, send ) ->
-      ### When the first event—data or the end signal—comes down the mainstream, start the bystream: ###
-      unless bystream_started
-        PS.pull bystream...
-        bystream_started = true
-      #.......................................................................................................
-      if d?
-        send d
-      else
-        mainstream_has_ended = true
-        send mainstream_end_sym
-    #.........................................................................................................
-    mainstream.push @$async ( d, send, done ) ->
-      mainstream_send = send
-
-      if d is mainstream_end_sym
-        send null
-        done()
-      else
-        send d
-        done()
-    #.........................................................................................................
-    R = PS.pull mainstream...
+    pipeline  = []
+    pipeline.push @$watch ( d ) -> urge '***', d
+    # pipeline.push @$tee ( d ) -> urge '***', d
+    R         = @pull pipeline...
+    x = []
+    x.push @$merge R, bysource
+    x.push @$show()
+    x.push @$drain()
     return R
 
-  # #-----------------------------------------------------------------------------------------------------------
-  # @$wye = ( bysource ) ->
-  #   generator = ->
-  #     loop
-  #       yield d
-  #     return null
-  #   return @pull mainstream...
-
-f.apply PS
+provide_$wye.apply PS
 
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "$wye 1" ] = ( T, done ) ->
+@[ "$merge 1" ] = ( T, done ) ->
   probes_and_matchers = [
-    [[['a','b','c'],[1,2,3]],["a","b","c"],null]
+    [[["a","b","c"],[1,2,3,4,5,6]],["a",1,"b",2,"c",3,4,5,6],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
@@ -109,17 +79,63 @@ f.apply PS
         drainer             = -> resolve R
         source_1            = PS.new_push_source()
         source_2            = PS.new_push_source()
+        #...................................................................................................
         pipeline_1          = []
         pipeline_1.push source_1
-        pipeline_1.push PS.$watch ( d ) -> whisper '10191', d
-        pipeline_1.push PS.$wye source_2
-        pipeline_1.push PS.$watch ( d ) -> R.push d
-        pipeline_1.push PS.$watch ( d ) -> urge '10191', d
-        pipeline_1.push PS.$drain drainer
-        PS.pull pipeline_1...
-        source_1.push chr for chr in probe[ 0 ]
-        source_2.push chr for chr in probe[ 1 ]
+        pipeline_1.push PS.$watch ( d ) -> whisper '10191-1', d
+        #...................................................................................................
+        pipeline_2          = []
+        pipeline_2.push source_2
+        pipeline_2.push PS.$watch ( d ) -> whisper '10191-2', d
+        #...................................................................................................
+        pipeline_3          = []
+        pipeline_3.push PS.$merge ( PS.pull pipeline_1... ), ( PS.pull pipeline_2... )
+        pipeline_3.push PS.$watch ( d ) -> R.push d
+        pipeline_3.push PS.$watch ( d ) -> urge '10191-3', d
+        pipeline_3.push PS.$drain drainer
+        PS.pull pipeline_3...
+        max_idx = ( Math.max probe[ 0 ].length, probe[ 1 ].length ) - 1
+        for idx in [ 0 .. max_idx ]
+          source_1.push x if ( x = probe[ 0 ][ idx ] )?
+          source_2.push x if ( x = probe[ 1 ][ idx ] )?
         source_1.end()
+        source_2.end()
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "$wye 1" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[["a","b","c"],[1,2,3,4,5,6]],["a",1,"b",2,"c",3,4,5,6],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, ->
+      new Promise ( resolve, reject ) ->
+        R                   = []
+        drainer             = -> resolve R
+        source_1            = PS.new_push_source()
+        source_2            = PS.new_push_source()
+        #...................................................................................................
+        bystream            = []
+        bystream.push source_2
+        bystream.push PS.$watch ( d ) -> whisper '10191-2', d
+        bystream = PS.pull bystream...
+        #...................................................................................................
+        mainstream          = []
+        mainstream.push source_1
+        mainstream.push PS.$watch ( d ) -> whisper '10191-1', d
+        mainstream.push PS.$wye bystream
+        mainstream.push PS.$watch ( d ) -> R.push d
+        mainstream.push PS.$watch ( d ) -> urge '10191-3', d
+        mainstream.push PS.$drain drainer
+        PS.pull mainstream...
+        max_idx = ( Math.max probe[ 0 ].length, probe[ 1 ].length ) - 1
+        for idx in [ 0 .. max_idx ]
+          source_1.push x if ( x = probe[ 0 ][ idx ] )?
+          source_2.push x if ( x = probe[ 1 ][ idx ] )?
+        source_1.end()
+        source_2.end()
   done()
   return null
 
@@ -128,5 +144,6 @@ f.apply PS
 
 ############################################################################################################
 unless module.parent?
-  test @
+  # test @
+  test @[ "$wye 1" ]
 

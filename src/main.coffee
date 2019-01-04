@@ -266,7 +266,7 @@ return_id                 = ( x ) -> x
     return null
 
 #-----------------------------------------------------------------------------------------------------------
-@$generate = ( generator ) ->
+@new_generator_source = ( generator ) ->
   return ( end, handler ) ->
     return handler end if end
     R = generator.next()
