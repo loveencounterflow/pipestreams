@@ -115,7 +115,7 @@ return_id                 = ( x ) -> x
   return pull.filter method
 
 #-----------------------------------------------------------------------------------------------------------
-@map = ( method ) ->
+@$map = ( method ) ->
   throw new Error "µ17063 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   switch arity = method.length
     when 1 then null
@@ -296,7 +296,7 @@ return_id                 = ( x ) -> x
     throw new Error "µ42308 expected a number between 0 and 1, got #{rpr p}"
   #.........................................................................................................
   ### Handle trivial edge cases faster (hopefully): ###
-  return ( @map     ( record ) => record  ) if p == 1
+  return ( @$map    ( record ) => record  ) if p == 1
   return ( @$filter ( record ) => false   ) if p == 0
   #.........................................................................................................
   headers   = options?[ 'headers'     ] ? false

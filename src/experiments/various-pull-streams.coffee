@@ -85,7 +85,7 @@ demo_mux_async_sources = ->
   mux       = require 'pull-mux'
   source_1  = new_async_source 's1'
   source_2  = new_async_source 's2'
-  $demux    = -> PS.map ( [ k, v, ] ) -> v
+  $demux    = -> PS.$map ( [ k, v, ] ) -> v
   # $demux    = $ ( [ k, v, ], send ) -> send v
   return new Promise ( resolve ) ->
     pipeline  = []

@@ -50,7 +50,7 @@ read                      = ( path ) -> FS.readFileSync path, { encoding: 'utf-8
 #     sink_2_finished = true
 #     finish()
 #   #.........................................................................................................
-#   $link       = ( linker )  -> PS.map     ( value  ) -> ( JSON.stringify value ) + linker
+#   $link       = ( linker )  -> PS.$map    ( value  ) -> ( JSON.stringify value ) + linker
 #   $keep_odd   =             -> PS.$filter ( number ) -> number % 2 isnt 0
 #   $keep_even  =             -> PS.$filter ( number ) -> number % 2 is   0
 #   #.........................................................................................................
@@ -121,7 +121,7 @@ read                      = ( path ) -> FS.readFileSync path, { encoding: 'utf-8
     wait_count += -1
     done() if wait_count <= 0
   #.........................................................................................................
-  $link       = ( linker )  -> PS.map     ( value  ) -> ( JSON.stringify value ) + linker
+  $link       = ( linker )  -> PS.$map    ( value  ) -> ( JSON.stringify value ) + linker
   $keep_odd   =             -> PS.$filter ( number ) -> number % 2 isnt 0
   $keep_even  =             -> PS.$filter ( number ) -> number % 2 is   0
   #.........................................................................................................

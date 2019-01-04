@@ -81,8 +81,7 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
 @$desaturate = ->
   ### remove ANSI escape sequences ###
   pattern = /\x1b\[[0-9;]*[JKmsu]/g
-  return @map ( line ) =>
-    return line.replace pattern, ''
+  return @$map ( line ) => line.replace pattern, ''
 
 
 
