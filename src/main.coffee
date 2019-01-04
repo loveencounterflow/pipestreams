@@ -266,6 +266,14 @@ return_id                 = ( x ) -> x
     return null
 
 #-----------------------------------------------------------------------------------------------------------
+@$generate = ( generator ) ->
+  return ( end, handler ) ->
+    return handler end if end
+    R = generator.next()
+    return handler true if R.done
+    handler null, R.value
+
+#-----------------------------------------------------------------------------------------------------------
 @$tee = ( stream ) ->
   ### **NB** that in contradistinction to `pull-tee`, you can only divert to a single by-stream with each
   call to `PS.$tee` ###

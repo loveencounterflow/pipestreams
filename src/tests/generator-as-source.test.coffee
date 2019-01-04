@@ -29,6 +29,8 @@ PS                        = require '../..'
   Ø             = ( x ) => pipeline.push x
   # expect_count  = Math.max 0, probes.length - width + 1
   #.........................................................................................................
+  ### TAINT his isn't a generator in the technical sense, but the code from
+  https://github.com/pull-stream/pull-stream/blob/master/sources/infinite.js expanded upon. ###
   $random = ( n, seed, delta ) ->
     rnd = CND.get_rnd n, seed, delta
     return ( end, callback ) ->
@@ -49,6 +51,32 @@ PS                        = require '../..'
   Ø PS.$drain()
   #.........................................................................................................
   PS.pull pipeline...
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "generator as source 2" ] = ( T, done ) ->
+  count = 0
+  #.........................................................................................................
+  g = ( max ) ->
+    loop
+      break if count >= max
+      yield ++count
+    return null
+  #.........................................................................................................
+  await T.perform null, [ 1, 2, 3, 4, ], ->
+    return new Promise ( resolve ) ->
+      pipeline = []
+      pipeline.push PS.$generate g 10
+      pipeline.push $ ( d, send ) -> send if d is 5 then null else d
+      pipeline.push PS.$show()
+      pipeline.push PS.$collect()
+      pipeline.push PS.$watch ( d ) ->
+        debug '22920', d
+        resolve d
+      pipeline.push PS.$drain()
+      PS.pull pipeline...
+  done()
+  return null
+
 
 ############################################################################################################
 unless module.parent?
