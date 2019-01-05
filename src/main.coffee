@@ -168,14 +168,25 @@ return_id                 = ( x ) -> x
   return pull_through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
-@$async = ( method ) ->
-  ### TAINT signature should be ( hint, method ) ###
+@$async = ( hint, method ) ->
   ### TAINT currently all results from client method are buffered until `done` gets called; see whether
   it is possible to use `await` so that each result can be sent doen the pipeline w/out buffering ###
+  switch arity = arguments.length
+    when 1
+      method  = hint
+      hint    = null
+    when 2
+      throw new Error "µ18594 unknown hint #{rpr hint}" unless hint is 'null'
+    else throw new Error "µ19359 expected 1 or 2 arguments, got #{arity}"
+  #.........................................................................................................
   throw new Error "µ18187 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-  throw new Error "µ18203 expected one argument, got #{arity}" unless ( arity = arguments.length ) is 1
+  throw new Error "µ18203 expected one or two arguments, got #{arity}" unless 1 <= ( arity = arguments.length ) <= 2
   throw new Error "µ18219 method arity #{arity} not implemented" unless ( arity = method.length ) is 3
-  pipeline = []
+  end_sym   = Symbol 'end'
+  pipeline  = []
+  #.........................................................................................................
+  if hint is 'null'
+    pipeline.push @$ 'null', ( d, send ) => send if d? then d else end_sym
   #.........................................................................................................
   pipeline.push $paramap ( d, handler ) =>
     collector = []
@@ -190,6 +201,7 @@ return_id                 = ( x ) -> x
       handler null, collector
       return null
     #.......................................................................................................
+    d = null if d is end_sym
     method d, send, done
     return null
   #.........................................................................................................

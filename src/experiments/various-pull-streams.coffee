@@ -210,6 +210,34 @@ async_with_end_detection = ->
   #.........................................................................................................
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+async_with_end_detection_2 = ->
+  buffer    = [ 11 .. 15 ]
+  pipeline  = []
+  send      = null
+  flush     = => send buffer.pop() while not is_empty buffer
+  #.........................................................................................................
+  pipeline.push PS.new_value_source [ 1 .. 5 ]
+  pipeline.push PS.$defer()
+  #.........................................................................................................
+  pipeline.push PS.$async 'null', ( d, _send, done ) =>
+    send = _send
+    if d?
+      send d
+      done()
+    else
+      flush()
+      debug 'end'
+      # done()
+      after 2, done
+    return null
+  #.........................................................................................................
+  pipeline.push PS.$show()
+  pipeline.push PS.$drain()
+  PS.pull pipeline...
+  #.........................................................................................................
+  return null
+
 
 ############################################################################################################
 unless module.parent?
@@ -218,7 +246,8 @@ unless module.parent?
   # demo_mux_async_sources_1()
   # demo_mux_async_sources_2()
   # demo_through()
-  async_with_end_detection()
+  # async_with_end_detection()
+  async_with_end_detection_2()
 
 
 
