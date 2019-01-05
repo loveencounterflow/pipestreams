@@ -95,7 +95,7 @@ provide_$wye = ->
         @pull bystream...
       #.......................................................................................................
       if d?
-        ### In case there's mainstream data, flush out any bystream data first, then send d, call `done` and
+        ### In case there's mainstream data, flush out any bystream data, send d, call `done` and
         un-define it: ###
         flush()
         send d
@@ -110,7 +110,6 @@ provide_$wye = ->
           done = null
       #.......................................................................................................
       return null
-    # mainstream.push @$tee ( d ) => urge '***', d
     #.........................................................................................................
     R = @pull mainstream...
     return R

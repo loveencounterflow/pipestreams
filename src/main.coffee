@@ -205,8 +205,8 @@ return_id                 = ( x ) -> x
     method d, send, done
     return null
   #.........................................................................................................
-  pipeline.push @$ ( d, send ) =>
-    send d.pop() while d.length > 0
+  pipeline.push @$defer()
+  pipeline.push @$ ( d, send ) => send d.pop() while d.length > 0
   #.........................................................................................................
   return @pull pipeline...
 
