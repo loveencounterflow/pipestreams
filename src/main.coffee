@@ -279,13 +279,6 @@ return_id                 = ( x ) -> x
     return null
 
 #-----------------------------------------------------------------------------------------------------------
-@$tee = ( stream ) ->
-  ### **NB** that in contradistinction to `pull-tee`, you can only divert to a single by-stream with each
-  call to `PS.$tee` ###
-  # R = if ( CND.isa_list stream_or_pipeline ) then ( pull stream_or_pipeline ) else stream_or_pipeline
-  return ( require 'pull-tee' ) stream
-
-#-----------------------------------------------------------------------------------------------------------
 @$show = ( settings ) ->
   title     = settings?[ 'title'      ] ? '-->'
   serialize = settings?[ 'serialize'  ] ? JSON.stringify
