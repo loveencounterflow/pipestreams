@@ -29,7 +29,6 @@ $paramap                  = require 'pull-paramap'
 pull                      = require 'pull-stream'
 pull_through              = require 'pull-through'
 pull_cont                 = require 'pull-cont'
-unpack_sym                = Symbol 'unpack'
 _map_errors               = require './_map_errors'
 #...........................................................................................................
 after                     = ( dts, f ) -> setTimeout f, dts * 1000
@@ -179,29 +178,23 @@ return_id                 = ( x ) -> x
   pipeline = []
   #.........................................................................................................
   pipeline.push $paramap ( d, handler ) =>
-    collector = null
+    collector = []
+    prv_send  = null
     #.......................................................................................................
     send = ( d ) =>
       return handler true if d is null
-      unless collector?
-        collector               = []
-        collector[ unpack_sym ] = true
-      collector.push d
+      collector.unshift d
       return null
     #.......................................................................................................
     done = =>
       handler null, collector
-      collector = null
       return null
     #.......................................................................................................
     method d, send, done
     return null
   #.........................................................................................................
   pipeline.push @$ ( d, send ) =>
-    if ( CND.isa_list d ) and d[ unpack_sym ]
-      send x for x in d
-    else
-      send d
+    send d.pop() while d.length > 0
   #.........................................................................................................
   return @pull pipeline...
 
