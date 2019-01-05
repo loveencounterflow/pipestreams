@@ -65,7 +65,7 @@ PS                        = require '../..'
   await T.perform null, [ 1, 2, 3, 4, ], ->
     return new Promise ( resolve ) ->
       pipeline = []
-      pipeline.push PS.$generate g 10
+      pipeline.push PS.new_generator_source g 10
       pipeline.push $ ( d, send ) -> send if d is 5 then null else d
       pipeline.push PS.$show()
       pipeline.push PS.$collect()
