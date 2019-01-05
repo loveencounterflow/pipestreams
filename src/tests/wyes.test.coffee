@@ -22,7 +22,9 @@ test                      = require 'guy-test'
 PS                        = require '../..'
 { $, $async, }            = PS
 #...........................................................................................................
-{ jr }                    = CND
+{ jr
+  is_empty }              = CND
+defer                     = setImmediate
 
 # https://pull-stream.github.io/#pull-through
 
@@ -53,14 +55,37 @@ provide_$wye = ->
 
   #-----------------------------------------------------------------------------------------------------------
   @$wye = ( bysource ) ->
-    pipeline  = []
-    pipeline.push @$watch ( d ) -> urge '***', d
-    # pipeline.push @$tee ( d ) -> urge '***', d
-    R         = @pull pipeline...
-    x = []
-    x.push @$merge R, bysource
-    x.push @$show()
-    x.push @$drain()
+    send              = null
+    mainstream_ended  = false
+    bystream_started  = false
+    bystream_ended    = false
+    #.........................................................................................................
+    mainstream        = []
+    mainstream.push @$ 'null', ( d, send ) =>
+      mainstream_ended = true unless d?
+      send d
+    mainstream.push @$async ( d, _send, done ) =>
+      send = _send
+      unless bystream_started
+        bystream_started = true
+        @pull bystream...
+      send d
+      done()
+      send 'y'
+      defer => send 'x'
+    mainstream.push @$defer()
+    # mainstream.push @$tee ( d ) => urge '***', d
+    #.........................................................................................................
+    bystream          = []
+    bystream.push @$show()
+    # bystream.push @$ 'null', ( d, _send ) =>
+    #   if d?
+    #     send d
+    #   else
+    #     bystream_ended = true
+    bystream.push @$drain()
+    #.........................................................................................................
+    R                 = @pull mainstream...
     return R
 
 provide_$wye.apply PS
