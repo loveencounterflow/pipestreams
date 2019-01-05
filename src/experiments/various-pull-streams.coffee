@@ -18,7 +18,8 @@ PS                        = require '../..'
 { $, $async, }            = PS
 #...........................................................................................................
 after                     = ( dts, f ) -> setTimeout f, dts * 1000
-{ jr }                    = CND
+{ jr
+  is_empty }              = CND
 
 # https://pull-stream.github.io/#pull-through
 # nope https://github.com/dominictarr/pull-flow (https://github.com/pull-stream/pull-stream/issues/4)
@@ -162,10 +163,64 @@ demo_mux_async_sources_2 = ->
     after 1.0, -> source_2.end()
     return null
 
+#-----------------------------------------------------------------------------------------------------------
+demo_through = ->
+  through = require 'pull-through' ### https://github.com/pull-stream/pull-through ###
+
+#-----------------------------------------------------------------------------------------------------------
+async_with_end_detection = ->
+  start_sym = Symbol 'start'
+  end_sym   = Symbol 'end'
+  buffer    = [ 11 .. 15 ]
+  pipeline  = []
+  send      = null
+  flush     = => send buffer.pop() while not is_empty buffer
+  pipeline.push PS.new_value_source [ 1 .. 5 ]
+  pipeline.push PS.$defer()
+  #.........................................................................................................
+  pipeline.push do =>
+    is_first = true
+    return $ 'null', ( d, send ) =>
+      if is_first
+        is_first = false
+        send start_sym
+      return send d if d?
+      send end_sym
+  #.........................................................................................................
+  pipeline.push PS.$async ( d, _send, done ) =>
+    send = _send
+    switch d
+      when start_sym
+        debug 'start'
+        send buffer.pop()
+        done()
+      when end_sym
+        flush()
+        debug 'end'
+        # done()
+        after 2, done
+      else
+        send d
+        done()
+    return null
+  #.........................................................................................................
+  pipeline.push PS.$show()
+  pipeline.push PS.$drain()
+  PS.pull pipeline...
+  #.........................................................................................................
+  return null
+
+
 ############################################################################################################
 unless module.parent?
   # demo_merge_1()
   # demo_merge_async_sources()
   # demo_mux_async_sources_1()
-  demo_mux_async_sources_2()
+  # demo_mux_async_sources_2()
+  # demo_through()
+  async_with_end_detection()
+
+
+
+
 
