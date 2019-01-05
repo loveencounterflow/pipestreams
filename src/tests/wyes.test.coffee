@@ -55,37 +55,64 @@ provide_$wye = ->
 
   #-----------------------------------------------------------------------------------------------------------
   @$wye = ( bysource ) ->
-    send              = null
     mainstream_ended  = false
     bystream_started  = false
     bystream_ended    = false
-    #.........................................................................................................
-    mainstream        = []
-    mainstream.push @$ 'null', ( d, send ) =>
-      mainstream_ended = true unless d?
-      send d
-    mainstream.push @$async ( d, _send, done ) =>
-      send = _send
-      unless bystream_started
-        bystream_started = true
-        @pull bystream...
-      send d
-      done()
-      send 'y'
-      defer => send 'x'
-    mainstream.push @$defer()
-    # mainstream.push @$tee ( d ) => urge '***', d
+    send              = null
+    done              = null
+    buffer            = []
+    stack             = ( x ) => buffer.unshift x
+    flush             = => send buffer.pop() while not is_empty buffer
     #.........................................................................................................
     bystream          = []
-    bystream.push @$show()
-    # bystream.push @$ 'null', ( d, _send ) =>
-    #   if d?
-    #     send d
-    #   else
-    #     bystream_ended = true
+    bystream.push bysource
+    bystream.push @$ 'null', ( d, _send ) =>
+      if d?
+        ### When `done` is defined, mainstream has ended, but `done` has not been called, meaning we can
+        send directly (but avoid calling `done` yet); otherwise, we buffer the data: ###
+        if done? then send  d
+        else          stack d
+      else
+        ### When data is `null`, bystream has ended; if mainstream has already ended, `done` is be defined,
+        so we flush out any remaining data, then call `done`: ###
+        bystream_ended = true
+        if done?
+          flush()
+          done()
+      return null
     bystream.push @$drain()
     #.........................................................................................................
-    R                 = @pull mainstream...
+    mainstream        = []
+    mainstream.push @$async 'null', ( d, _send, _done ) =>
+      ### `send` and `done` are shared within this method and will be needed to send values from bystream
+      if it terminates later than mainstream: ###
+      send = _send
+      done = _done
+      #.......................................................................................................
+      unless bystream_started
+        ### In case bystream has not yeen been started, do that now: ###
+        bystream_started = true
+        @pull bystream...
+      #.......................................................................................................
+      if d?
+        ### In case there's mainstream data, flush out any bystream data first, then send d, call `done` and
+        un-define it: ###
+        flush()
+        send d
+        done()
+        done = null
+      else
+        ### In case mainstream data is `null`, mainstream has terminated. If bystream has been terminated
+        as well, call `done` and un-define it: ###
+        flush()
+        if bystream_ended
+          done()
+          done = null
+      #.......................................................................................................
+      return null
+    # mainstream.push @$tee ( d ) => urge '***', d
+    #.........................................................................................................
+    R = @pull mainstream...
     return R
 
 provide_$wye.apply PS
@@ -107,16 +134,16 @@ provide_$wye.apply PS
         #...................................................................................................
         pipeline_1          = []
         pipeline_1.push source_1
-        pipeline_1.push PS.$watch ( d ) -> whisper '10191-1', d
+        pipeline_1.push PS.$watch ( d ) -> whisper '10191-2', d
         #...................................................................................................
         pipeline_2          = []
         pipeline_2.push source_2
-        pipeline_2.push PS.$watch ( d ) -> whisper '10191-2', d
+        pipeline_2.push PS.$watch ( d ) -> whisper '10191-3', d
         #...................................................................................................
         pipeline_3          = []
         pipeline_3.push PS.$merge ( PS.pull pipeline_1... ), ( PS.pull pipeline_2... )
         pipeline_3.push PS.$watch ( d ) -> R.push d
-        pipeline_3.push PS.$watch ( d ) -> urge '10191-3', d
+        pipeline_3.push PS.$watch ( d ) -> urge '10191-4', d
         pipeline_3.push PS.$drain drainer
         PS.pull pipeline_3...
         max_idx = ( Math.max probe[ 0 ].length, probe[ 1 ].length ) - 1
@@ -142,17 +169,18 @@ provide_$wye.apply PS
         source_1            = PS.new_push_source()
         source_2            = PS.new_push_source()
         #...................................................................................................
-        bystream            = []
-        bystream.push source_2
-        bystream.push PS.$watch ( d ) -> whisper '10191-2', d
-        bystream = PS.pull bystream...
+        bysource            = []
+        bysource.push source_2
+        bysource.push PS.$watch ( d ) -> whisper '10191-5', 'bysource', jr d
+        # bysource.push PS.$defer()
+        bysource = PS.pull bysource...
         #...................................................................................................
         mainstream          = []
         mainstream.push source_1
-        mainstream.push PS.$watch ( d ) -> whisper '10191-1', d
-        mainstream.push PS.$wye bystream
+        mainstream.push PS.$watch ( d ) -> whisper '10191-6', 'mainstream', jr d
+        mainstream.push PS.$wye bysource
         mainstream.push PS.$watch ( d ) -> R.push d
-        mainstream.push PS.$watch ( d ) -> urge '10191-3', d
+        mainstream.push PS.$watch ( d ) -> urge CND.white '10191-7', 'confluence', jr d
         mainstream.push PS.$drain drainer
         PS.pull mainstream...
         max_idx = ( Math.max probe[ 0 ].length, probe[ 1 ].length ) - 1
@@ -164,11 +192,59 @@ provide_$wye.apply PS
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "$wye 2" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[true,true,["a","b","c"],[1,2,3,4,5,6]],["a",1,"b",2,"c",3,4,5,6],null]
+    [[false,true,["a","b","c"],[1,2,3,4,5,6]],["a",1,"b",2,"c",3,4,5,6],null]
+    [[false,false,["a","b","c"],[1,2,3,4,5,6]],["a",1,"b",2,"c",3,4,5,6],null]
+    [[true,false,["a","b","c"],[1,2,3,4,5,6]],["a",1,"b",2,"c",3,4,5,6],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    matcher = matcher.sort()
+    await T.perform probe, matcher, error, ->
+      return new Promise ( resolve, reject ) ->
+        [ defer_mainstream
+          defer_bystream
+          mainstream_values
+          bystream_values ] = probe
+        R                   = []
+        drainer             = -> R = R.sort(); resolve R
+        mainsource          = PS.new_push_source()
+        bysource            = PS.new_push_source()
+        #...................................................................................................
+        bystream            = []
+        bystream.push bysource
+        bystream.push PS.$watch ( d ) -> whisper '10191-5', 'bysource', jr d
+        bystream.push PS.$defer() if defer_bystream
+        bystream = PS.pull bystream...
+        #...................................................................................................
+        mainstream          = []
+        mainstream.push mainsource
+        mainstream.push PS.$defer() if defer_mainstream
+        mainstream.push PS.$watch ( d ) -> whisper '10191-6', 'mainstream', jr d
+        mainstream.push PS.$wye bystream
+        mainstream.push PS.$watch ( d ) -> R.push d
+        mainstream.push PS.$watch ( d ) -> urge CND.white '10191-7', 'confluence', jr d
+        mainstream.push PS.$drain drainer
+        PS.pull mainstream...
+        max_idx = ( Math.max mainstream_values.length, bystream_values.length ) - 1
+        for idx in [ 0 .. max_idx ]
+          mainsource.push x if ( x = mainstream_values[ idx ] )?
+          bysource.push   x if ( x = bystream_values[   idx ] )?
+        mainsource.end()
+        bysource.end()
+        return null
+  done()
+  return null
+
 
 
 
 ############################################################################################################
 unless module.parent?
-  # test @
-  test @[ "$wye 1" ]
+  test @
+  # test @[ "$wye 1" ]
+  # test @[ "$wye 2" ]
 
