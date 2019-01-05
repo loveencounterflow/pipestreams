@@ -68,6 +68,14 @@ return_id                 = ( x ) -> x
   R.end   = R.end.bind R
   return R
 
+#-----------------------------------------------------------------------------------------------------------
+@new_generator_source = ( generator ) ->
+  return ( end, handler ) ->
+    return handler end if end
+    R = generator.next()
+    return handler true if R.done
+    handler null, R.value
+
 
 # #-----------------------------------------------------------------------------------------------------------
 # @map_start = ( method ) ->
@@ -264,14 +272,6 @@ return_id                 = ( x ) -> x
   return @$ ( collection, send ) =>
     send element for element in collection
     return null
-
-#-----------------------------------------------------------------------------------------------------------
-@new_generator_source = ( generator ) ->
-  return ( end, handler ) ->
-    return handler end if end
-    R = generator.next()
-    return handler true if R.done
-    handler null, R.value
 
 #-----------------------------------------------------------------------------------------------------------
 @$tee = ( stream ) ->
