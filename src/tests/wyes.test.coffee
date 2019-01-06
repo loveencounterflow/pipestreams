@@ -1,5 +1,7 @@
 
 
+'use strict'
+
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
@@ -155,12 +157,57 @@ defer                     = setImmediate
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "$wye 3" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [{start_value:0.5,delta: 0.01},["a",1,"b",2,"c",3,4,5,6],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    probe.min = 1 / 3 - probe.delta
+    probe.max = 1 / 3 + probe.delta
+    await T.perform probe, matcher, error, ->
+      return new Promise ( resolve, reject ) ->
+        R                   = []
+        drainer             = -> debug '10191-1', "mainstream ended"; resolve R
+        mainsource          = PS.new_push_source()
+        bysource            = PS.new_push_source()
+        #...................................................................................................
+        bystream            = []
+        bystream.push bysource
+        bystream.push PS.$watch ( d ) -> whisper '10191-1', 'bysource', jr d
+        bystream = PS.pull bystream...
+        #...................................................................................................
+        mainstream          = []
+        mainstream.push mainsource
+        mainstream.push PS.$watch ( d ) -> whisper '10191-2', 'mainstream', jr d
+        mainstream.push PS.$wye bystream
+        mainstream.push PS.$watch ( d ) -> whisper '10191-3', 'mainstream', jr d
+        mainstream.push PS.$defer()
+        mainstream.push PS.$ ( d, send ) ->
+          send d
+          if probe.min <= d <= probe.max
+            send null
+          else
+            bysource.push ( 1 - d ) / 2
+        mainstream.push PS.$defer()
+        mainstream.push PS.$watch ( d ) -> urge CND.white '10191-4', 'confluence', jr d
+        mainstream.push PS.$watch ( d ) -> R.push d
+        mainstream.push PS.$drain drainer
+        PS.pull mainstream...
+        mainsource.push probe.start_value
+        mainsource.end()
+        return null
+  done()
+  return null
+
 
 
 
 ############################################################################################################
 unless module.parent?
-  test @
+  # test @
   # test @[ "$wye 1" ]
   # test @[ "$wye 2" ]
+  test @[ "$wye 3" ]
 
