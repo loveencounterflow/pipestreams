@@ -20,7 +20,8 @@ performance.
 * [The PDF](./pipestreams-manual/pipestreams-manual.pdf)
 * [PipeStreams: Pipelines and Streams](./pipestreams-manual/chapter-00-intro.md)
 * [sampling](./pipestreams-manual/chapter-00-sampling.md)
-* [spawn](./pipestreams-manual/chapter-00-spawn.md)
+* [Wye, Tee and Merge](./pipestreams-manual/chapter-00-wye-tee-merge.md)
+<!-- * [spawn](./pipestreams-manual/chapter-00-spawn.md) -->
 * [Comparison with NodeJS Streams, Pull-Streams](./pipestreams-manual/chapter-00-comparison.md)
 
 ## ToDo
