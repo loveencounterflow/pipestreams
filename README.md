@@ -17,7 +17,10 @@ performance.
 
 ## Documentation
 
+**(Work In Progress)**
+
 * [The PDF](./pipestreams-manual/pipestreams-manual.pdf)
+* [Basics](./pipestreams-manual/chapter-00-basics.md)
 * [PipeStreams: Pipelines and Streams](./pipestreams-manual/chapter-00-intro.md)
 * [sampling](./pipestreams-manual/chapter-00-sampling.md)
 * [Wye, Tee and Merge](./pipestreams-manual/chapter-00-wye-tee-merge.md)
