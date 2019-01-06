@@ -75,43 +75,6 @@ return_id                 = ( x ) -> x
     return handler true if R.done
     handler null, R.value
 
-
-# #-----------------------------------------------------------------------------------------------------------
-# @map_start = ( method ) ->
-#   throw new Error "µ9413 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-#   throw new Error "µ10178 method arity #{arity} not implemented" unless ( arity = method.length ) is 0
-#   is_first = yes
-#   return _map_errors ( data ) =>
-#     if is_first
-#       is_first = no
-#       method()
-#     return data
-
-# #-----------------------------------------------------------------------------------------------------------
-# @map_stop = ( method ) ->
-#   throw new Error "µ10943 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-#   throw new Error "µ11708 method arity #{arity} not implemented" unless ( arity = method.length ) is 0
-#   return $pass_through return_id, ( abort ) ->
-#     method()
-#     return abort
-
-# #-----------------------------------------------------------------------------------------------------------
-# @map_first = ( method ) ->
-#   throw new Error "µ12473 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-#   throw new Error "µ13238 method arity #{arity} not implemented" unless ( arity = method.length ) is 1
-#   is_first = yes
-#   return _map_errors ( data ) =>
-#     if is_first
-#       is_first = no
-#       method data
-#     return data
-
-# #-----------------------------------------------------------------------------------------------------------
-# @map_last = ( method ) ->
-#   throw new Error "µ14003 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
-#   throw new Error "µ14768 method arity #{arity} not implemented" unless ( arity = method.length ) is 1
-#   throw new Error 'meh'
-
 #-----------------------------------------------------------------------------------------------------------
 @$filter = ( method ) ->
   throw new Error "µ15533 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
@@ -238,30 +201,6 @@ return_id                 = ( x ) -> x
     throw new Error "µ25478 expected a function, got a #{type} for argument # #{idx + 1}"
   return pull methods...
 
-
-#-----------------------------------------------------------------------------------------------------------
-@$gliding_window = ( width, method ) ->
-  throw new Error "µ32363 expected a number, got a #{type}" unless ( CND.type_of width ) is 'number'
-  section = []
-  send    = null
-  #.........................................................................................................
-  push = ( x ) ->
-    section.push x
-    R =
-    while section.length > width
-      send section.shift()
-    return null
-  #.........................................................................................................
-  return @$ 'null', ( new_data, send_ ) =>
-    send = send_
-    if new_data?
-      push new_data
-      method section if section.length >= width
-    else
-      while section.length > 0
-        send section.shift()
-      send null
-    return null
 
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( settings ) ->
