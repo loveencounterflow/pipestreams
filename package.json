@@ -6,7 +6,7 @@
   "scripts": {
     "build": "coffee --map -o lib -c src",
     "doctoc": "doctoc README.md",
-    "test": "npm run build && node lib/tests/main.js"
+    "test": "npm run build && c8 --reporter=html node lib/tests/main.js"
   },
   "repository": {
     "type": "git",
