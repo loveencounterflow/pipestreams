@@ -38,6 +38,11 @@ return_id                 = ( x ) -> x
   copy
   assign
   jr }                    = CND
+#...........................................................................................................
+@symbols =
+  misfit:       Symbol 'misfit'
+  first:        Symbol 'first'
+  last:         Symbol 'last'
 
 
 #===========================================================================================================
@@ -95,12 +100,24 @@ return_id                 = ( x ) -> x
 
 #-----------------------------------------------------------------------------------------------------------
 @$ = @remit = ( hint, method ) ->
+  ### NOTE we're transitioning from the experimental `hint` call convention to the more flexible and
+  standard `settings` (which are here placed first, not last, b/c one frequently wants to write out a
+  function body as last argument). For a limited time, `'null'` is accepted in place of a `settings` object;
+  after that, `{ last: null }` (or using other value except `PS.symbols.misfit`) should be used. ###
+  #.........................................................................................................
+  defaults  = { first: @symbols.misfit, last: @symbols.misfit, }
+  settings  = assign {}, defaults
   switch arity = arguments.length
     when 1
-      method  = hint
-      hint    = null
+      method    = hint
+      hint      = null
     when 2
-      throw new Error "µ18593 unknown hint #{rpr hint}" unless hint is 'null'
+      if CND.isa_text hint
+        throw new Error "µ18593 unknown hint #{rpr hint}" unless hint is 'null'
+        warn "µ30902 Deprecation Warning: use `{last:null}` instead of `'null'`"
+        settings.last = null
+      else
+        settings = assign settings, hint
     else throw new Error "µ19358 expected 1 or 2 arguments, got #{arity}"
   #.........................................................................................................
   switch client_arity = method.length
@@ -119,10 +136,10 @@ return_id                 = ( x ) -> x
     self = null
     return null
   #.........................................................................................................
-  if hint is 'null'
+  if ( last_data = settings.last ) isnt @symbols.misfit
     on_end = ->
       self = @
-      method null, send
+      method last_data, send
       self = null
       ### somewhat hidden in the docs: *must* call `@queue null` to end stream: ###
       @queue null
@@ -134,6 +151,12 @@ return_id                 = ( x ) -> x
 @$async = ( hint, method ) ->
   ### TAINT currently all results from client method are buffered until `done` gets called; see whether
   it is possible to use `await` so that each result can be sent doen the pipeline w/out buffering ###
+  #.........................................................................................................
+  ### NOTE we're transitioning from the experimental `hint` call convention to the more flexible and
+  standard `settings` (which are here placed first, not last, b/c one frequently wants to write out a
+  function body as last argument). For a limited time, `'null'` is accepted in place of a `settings` object;
+  after that, `{ last: null }` (or using other value except `PS.symbols.misfit`) should be used. ###
+  #.........................................................................................................
   switch arity = arguments.length
     when 1
       method  = hint
