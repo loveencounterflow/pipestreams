@@ -169,8 +169,6 @@ demo_through = ->
 
 #-----------------------------------------------------------------------------------------------------------
 async_with_end_detection = ->
-  start_sym = Symbol 'start'
-  end_sym   = Symbol 'end'
   buffer    = [ 11 .. 15 ]
   pipeline  = []
   send      = null
@@ -180,21 +178,20 @@ async_with_end_detection = ->
   #.........................................................................................................
   pipeline.push do =>
     is_first = true
-    return $ 'null', ( d, send ) =>
+    return $ { last: PS.symbols.last, }, ( d, send ) =>
       if is_first
         is_first = false
-        send start_sym
-      return send d if d?
-      send end_sym
+        send PS.symbols.first
+      send d
   #.........................................................................................................
   pipeline.push PS.$async ( d, _send, done ) =>
     send = _send
     switch d
-      when start_sym
+      when PS.symbols.first
         debug 'start'
         send buffer.pop()
         done()
-      when end_sym
+      when PS.symbols.last
         flush()
         debug 'end'
         # done()
@@ -238,6 +235,22 @@ async_with_end_detection_2 = ->
   #.........................................................................................................
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+sync_with_first_and_last = ->
+  drainer   = -> help 'ok'
+  pipeline  = []
+  pipeline.push PS.new_value_source [ 1 .. 5 ]
+  #.........................................................................................................
+  pipeline.push PS.$surround { first: 'first--', last: '--last', before: '(', between: ',', after: ')' }
+  #.........................................................................................................
+  pipeline.push PS.$collect()
+  pipeline.push $ ( d, send ) -> send ( x.toString() for x in d ).join ''
+  pipeline.push PS.$show()
+  pipeline.push PS.$drain drainer
+  PS.pull pipeline...
+  #.........................................................................................................
+  return null
+
 
 ############################################################################################################
 unless module.parent?
@@ -247,7 +260,8 @@ unless module.parent?
   # demo_mux_async_sources_2()
   # demo_through()
   # async_with_end_detection()
-  async_with_end_detection_2()
+  # async_with_end_detection_2()
+  sync_with_first_and_last()
 
 
 

@@ -99,13 +99,13 @@ return_id                 = ( x ) -> x
   return _map_errors method
 
 #-----------------------------------------------------------------------------------------------------------
-@$ = @remit = ( hint, method ) ->
-  ### NOTE we're transitioning from the experimental `hint` call convention to the more flexible and
-  standard `settings` (which are here placed first, not last, b/c one frequently wants to write out a
-  function body as last argument). For a limited time, `'null'` is accepted in place of a `settings` object;
-  after that, `{ last: null }` (or using other value except `PS.symbols.misfit`) should be used. ###
-  #.........................................................................................................
-  defaults  = { first: @symbols.misfit, last: @symbols.misfit, }
+@_get_remit_settings = ( hint, method ) ->
+  defaults  =
+    first:    @symbols.misfit
+    last:     @symbols.misfit
+    between:  @symbols.misfit
+    after:    @symbols.misfit
+    before:   @symbols.misfit
   settings  = assign {}, defaults
   switch arity = arguments.length
     when 1
@@ -115,31 +115,60 @@ return_id                 = ( x ) -> x
       if CND.isa_text hint
         throw new Error "µ18593 unknown hint #{rpr hint}" unless hint is 'null'
         warn "µ30902 Deprecation Warning: use `{last:null}` instead of `'null'`"
+        process.exit 1
         settings.last = null
       else
         settings = assign settings, hint
     else throw new Error "µ19358 expected 1 or 2 arguments, got #{arity}"
+  return { settings, method, }
+
+#-----------------------------------------------------------------------------------------------------------
+@$ = @remit = ( P... ) ->
+  ### NOTE we're transitioning from the experimental `hint` call convention to the more flexible and
+  standard `settings` (which are here placed first, not last, b/c one frequently wants to write out a
+  function body as last argument). For a limited time, `'null'` is accepted in place of a `settings` object;
+  after that, `{ last: null }` (or using other value except `PS.symbols.misfit`) should be used. ###
   #.........................................................................................................
+  { settings, method, } = @_get_remit_settings P...
   switch client_arity = method.length
     when 2 then null
     else throw new Error "µ20123 method arity #{client_arity} not implemented"
   #.........................................................................................................
   throw new Error "µ20888 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   #.........................................................................................................
-  self    = null
-  send    = ( data ) => self.queue data
-  on_end  = null
+  self          = null
+  send          = ( data ) => self.queue data
+  data_first    = settings.first
+  data_before   = settings.before
+  data_between  = settings.between
+  data_after    = settings.after
+  data_last     = settings.last
+  send_first    = data_first    isnt @symbols.misfit
+  send_before   = data_before   isnt @symbols.misfit
+  send_between  = data_between  isnt @symbols.misfit
+  send_after    = data_after    isnt @symbols.misfit
+  send_last     = data_last     isnt @symbols.misfit
+  on_end        = null
+  is_first      = true
+  PS            = @
   #.........................................................................................................
   on_data = ( data ) ->
     self = @
-    method data, send
+    if is_first
+      is_first = false
+      method data_first, send if send_first
+    else
+      method data_between, send if send_between
+    method data_before, send  if send_before
+    method data,        send
+    method data_after,  send  if send_after
     self = null
     return null
   #.........................................................................................................
-  if ( last_data = settings.last ) isnt @symbols.misfit
+  if send_last
     on_end = ->
       self = @
-      method last_data, send
+      method data_last, send
       self = null
       ### somewhat hidden in the docs: *must* call `@queue null` to end stream: ###
       @queue null
@@ -148,7 +177,7 @@ return_id                 = ( x ) -> x
   return pull_through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
-@$async = ( hint, method ) ->
+@$async = ( P... ) ->
   ### TAINT currently all results from client method are buffered until `done` gets called; see whether
   it is possible to use `await` so that each result can be sent doen the pipeline w/out buffering ###
   #.........................................................................................................
@@ -157,22 +186,14 @@ return_id                 = ( x ) -> x
   function body as last argument). For a limited time, `'null'` is accepted in place of a `settings` object;
   after that, `{ last: null }` (or using other value except `PS.symbols.misfit`) should be used. ###
   #.........................................................................................................
-  switch arity = arguments.length
-    when 1
-      method  = hint
-      hint    = null
-    when 2
-      throw new Error "µ18594 unknown hint #{rpr hint}" unless hint is 'null'
-    else throw new Error "µ19359 expected 1 or 2 arguments, got #{arity}"
-  #.........................................................................................................
+  { settings, method, } = @_get_remit_settings P...
   throw new Error "µ18187 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   throw new Error "µ18203 expected one or two arguments, got #{arity}" unless 1 <= ( arity = arguments.length ) <= 2
   throw new Error "µ18219 method arity #{arity} not implemented" unless ( arity = method.length ) is 3
-  end_sym   = Symbol 'end'
   pipeline  = []
   #.........................................................................................................
-  if hint is 'null'
-    pipeline.push @$ 'null', ( d, send ) => send if d? then d else end_sym
+  if ( last_data = settings.last ) isnt @symbols.misfit
+    pipeline.push @$ { last: last_data, }, ( d, send ) => send d
   #.........................................................................................................
   pipeline.push $paramap ( d, handler ) =>
     collector = []
@@ -187,14 +208,20 @@ return_id                 = ( x ) -> x
       handler null, collector
       return null
     #.......................................................................................................
-    d = null if d is end_sym
     method d, send, done
+    method null, send, done if ( d isnt null ) and ( d is settings.last )
+    # d = null if d is end_sym
     return null
   #.........................................................................................................
   pipeline.push @$defer()
   pipeline.push @$ ( d, send ) => send d.pop() while d.length > 0
   #.........................................................................................................
   return @pull pipeline...
+
+#-----------------------------------------------------------------------------------------------------------
+### Given a `settings` object, add values to the stream as `$ settings, ( d, send ) -> send d` would do,
+e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }`. ###
+@$surround = ( settings ) -> @$ settings, ( d, send ) => send d
 
 
 #===========================================================================================================
@@ -229,7 +256,7 @@ return_id                 = ( x ) -> x
 @$collect = ( settings ) ->
   throw new Error "µ33128 API changed" if settings?
   collector = []
-  return @$ 'null', ( data, send ) =>
+  return @$ { last: null, }, ( data, send ) =>
     if data? then collector.push data
     else send collector
     return null
