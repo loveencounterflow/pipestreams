@@ -31,7 +31,7 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
   length    = 0
   type      = null
   is_first  = yes
-  return @$ 'null', ( data, send ) ->
+  return @$ { last: null, }, ( data, send ) ->
     if data?
       if is_first
         is_first  = no
