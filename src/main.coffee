@@ -195,14 +195,16 @@ symbols =
   throw new Error "µ18187 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   throw new Error "µ18203 expected one or two arguments, got #{arity}" unless 1 <= ( arity = arguments.length ) <= 2
   throw new Error "µ18219 method arity #{arity} not implemented" unless ( arity = method.length ) is 3
-  pipeline  = []
   #.........................................................................................................
-  if ( last_data = settings.last ) isnt @symbols.misfit
-    pipeline.push @$ { last: last_data, }, ( d, send ) => send d
+  pipeline    = []
+  call_count  = 0
+  has_ended   = false
+  #.........................................................................................................
+  pipeline.push @$surround settings if settings._surround
+  pipeline.push @$surround { last: symbols.last, }
   #.........................................................................................................
   pipeline.push $paramap ( d, handler ) =>
-    collector = []
-    prv_send  = null
+    collector   = []
     #.......................................................................................................
     send = ( d ) =>
       return handler true if d is null
@@ -210,12 +212,17 @@ symbols =
       return null
     #.......................................................................................................
     done = =>
+      call_count += -1
       handler null, collector
+      handler true if has_ended and call_count < 1
       return null
     #.......................................................................................................
-    method d, send, done
-    method null, send, done if ( d isnt null ) and ( d is settings.last )
-    # d = null if d is end_sym
+    if d is symbols.last
+      has_ended = true
+      handler true if call_count < 1
+    else
+      call_count += +1
+      defer -> method d, send, done
     return null
   #.........................................................................................................
   pipeline.push @$defer()
