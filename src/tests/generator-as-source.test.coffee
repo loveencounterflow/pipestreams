@@ -41,7 +41,7 @@ PS                        = require '../..'
   Ø $random 10, 1, 1
   Ø PS.$show()
   Ø PS.$collect()
-  Ø $ 'null', ( data, send ) ->
+  Ø $ { last: null, }, ( data, send ) ->
     if data?
       # T.ok section_count is expect_count
       send data

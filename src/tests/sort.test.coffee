@@ -110,7 +110,7 @@ sort = ( values ) ->
 #       pipeline.push PS.$collect()
 #       pipeline.push PS.$show()
 #       #.....................................................................................................
-#       pipeline.push $ 'null', ( result, send ) ->
+#       pipeline.push $ { last: null, }, ( result, send ) ->
 #         if result?
 #           echo CND.gold jr [ probe, result, ]
 #           count += -1

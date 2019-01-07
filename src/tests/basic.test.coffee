@@ -29,6 +29,7 @@ $pull_drain               = require 'pull-stream/sinks/drain'
 pull_through              = require 'pull-through'
 #...........................................................................................................
 read                      = ( path ) -> FS.readFileSync path, { encoding: 'utf-8', }
+defer                     = setImmediate
 
 #-----------------------------------------------------------------------------------------------------------
 @_prune = ->
