@@ -197,7 +197,7 @@ read                      = ( path ) -> FS.readFileSync path, { encoding: 'utf-8
   pipeline.push $values Array.from 'abcdef'
   # pipeline.push pull_through ( ( data ) -> urge data ), ( -> urge 'ok'; @queue null )
   # pipeline.push pull_through ( ( data ) -> urge data ), null
-  pipeline.push $ 'null', ( data, send ) ->
+  pipeline.push $ { last: null, }, ( data, send ) ->
     if data?
       send data
       send '*' + data + '*'
@@ -243,7 +243,7 @@ read                      = ( path ) -> FS.readFileSync path, { encoding: 'utf-8
   Ø random 10
   # Ø random 3
   Ø PS.$collect()
-  Ø $ 'null', ( data, send ) ->
+  Ø $ { last: null, }, ( data, send ) ->
     if data?
       T.ok data.length is 10
       debug data
@@ -258,8 +258,62 @@ read                      = ( path ) -> FS.readFileSync path, { encoding: 'utf-8
   PS.pull pipeline...
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "$surround" ] = ( T, done ) ->
+  [ probe, matcher, error, ] = [null,"first[(1),(2),(3),(4),(5)]last",null]
+  await T.perform probe, matcher, error, ->
+    return new Promise ( resolve, reject ) ->
+      R         = null
+      drainer   = -> help 'ok'; resolve R
+      pipeline  = []
+      pipeline.push PS.new_value_source [ 1 .. 5 ]
+      #.........................................................................................................
+      pipeline.push PS.$surround { first: '[', last: ']', before: '(', between: ',', after: ')' }
+      pipeline.push PS.$surround { first: 'first', last: 'last', }
+      # pipeline.push PS.$surround { first: 'first', last: 'last', before: 'before', between: 'between', after: 'after' }
+      # pipeline.push PS.$surround { first: '[', last: ']', }
+      #.........................................................................................................
+      pipeline.push PS.$collect()
+      pipeline.push $ ( d, send ) -> send ( x.toString() for x in d ).join ''
+      pipeline.push PS.$watch ( d ) -> R = d
+      pipeline.push PS.$drain drainer
+      PS.pull pipeline...
+      return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "$surround async" ] = ( T, done ) ->
+  [ probe, matcher, error, ] = [null,"[first|1|2|3|4|5|last]",null]
+  await T.perform probe, matcher, error, ->
+    return new Promise ( resolve, reject ) ->
+      R         = null
+      drainer   = -> help 'ok'; resolve R
+      pipeline  = []
+      pipeline.push PS.new_value_source [ 1 .. 5 ]
+      #.........................................................................................................
+      pipeline.push PS.$surround { first: 'first', last: 'last', }
+      pipeline.push $async { first: '[', last: ']', between: '|', }, ( d, send, done ) =>
+        defer ->
+          # debug '22922', jr d
+          send d
+          done()
+      #.........................................................................................................
+      pipeline.push PS.$collect()
+      pipeline.push $ ( d, send ) -> send ( x.toString() for x in d ).join ''
+      pipeline.push PS.$watch ( d ) -> R = d
+      pipeline.push PS.$drain drainer
+      PS.pull pipeline...
+      return null
+  #.........................................................................................................
+  done()
+  return null
+
 ############################################################################################################
 unless module.parent?
   # include = []
   # @_prune()
-  @_main()
+  # @_main()
+  test @[ "$surround async" ]
+

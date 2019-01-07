@@ -62,7 +62,7 @@ CND                       = require 'cnd'
   #.........................................................................................................
   $sort = =>
     collector = []
-    return @$ 'null', ( data, send ) =>
+    return @$ { last: null, }, ( data, send ) =>
       if data?
         collector.push data
       else

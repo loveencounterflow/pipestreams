@@ -39,9 +39,8 @@ return_id                 = ( x ) -> x
   assign
   jr }                    = CND
 #...........................................................................................................
-@symbols =
+symbols =
   misfit:       Symbol 'misfit'
-  first:        Symbol 'first'
   last:         Symbol 'last'
 
 
@@ -101,11 +100,11 @@ return_id                 = ( x ) -> x
 #-----------------------------------------------------------------------------------------------------------
 @_get_remit_settings = ( hint, method ) ->
   defaults  =
-    first:    @symbols.misfit
-    last:     @symbols.misfit
-    between:  @symbols.misfit
-    after:    @symbols.misfit
-    before:   @symbols.misfit
+    first:    symbols.misfit
+    last:     symbols.misfit
+    between:  symbols.misfit
+    after:    symbols.misfit
+    before:   symbols.misfit
   settings  = assign {}, defaults
   switch arity = arguments.length
     when 1
@@ -120,6 +119,12 @@ return_id                 = ( x ) -> x
       else
         settings = assign settings, hint
     else throw new Error "µ19358 expected 1 or 2 arguments, got #{arity}"
+  settings._surround = \
+    ( settings.first    isnt symbols.misfit ) or \
+    ( settings.last     isnt symbols.misfit ) or \
+    ( settings.between  isnt symbols.misfit ) or \
+    ( settings.after    isnt symbols.misfit ) or \
+    ( settings.before   isnt symbols.misfit )
   return { settings, method, }
 
 #-----------------------------------------------------------------------------------------------------------
@@ -127,7 +132,7 @@ return_id                 = ( x ) -> x
   ### NOTE we're transitioning from the experimental `hint` call convention to the more flexible and
   standard `settings` (which are here placed first, not last, b/c one frequently wants to write out a
   function body as last argument). For a limited time, `'null'` is accepted in place of a `settings` object;
-  after that, `{ last: null }` (or using other value except `PS.symbols.misfit`) should be used. ###
+  after that, `{ last: null }` should be used. ###
   #.........................................................................................................
   { settings, method, } = @_get_remit_settings P...
   switch client_arity = method.length
@@ -143,11 +148,11 @@ return_id                 = ( x ) -> x
   data_between  = settings.between
   data_after    = settings.after
   data_last     = settings.last
-  send_first    = data_first    isnt @symbols.misfit
-  send_before   = data_before   isnt @symbols.misfit
-  send_between  = data_between  isnt @symbols.misfit
-  send_after    = data_after    isnt @symbols.misfit
-  send_last     = data_last     isnt @symbols.misfit
+  send_first    = data_first    isnt symbols.misfit
+  send_before   = data_before   isnt symbols.misfit
+  send_between  = data_between  isnt symbols.misfit
+  send_after    = data_after    isnt symbols.misfit
+  send_last     = data_last     isnt symbols.misfit
   on_end        = null
   is_first      = true
   PS            = @
