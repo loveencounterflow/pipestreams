@@ -18,6 +18,7 @@ PS                        = require '../..'
 { $, $async, }            = PS
 #...........................................................................................................
 after                     = ( dts, f ) -> setTimeout f, dts * 1000
+defer                     = setImmediate
 { jr
   is_empty }              = CND
 
@@ -241,8 +242,33 @@ sync_with_first_and_last = ->
   pipeline  = []
   pipeline.push PS.new_value_source [ 1 .. 5 ]
   #.........................................................................................................
-  pipeline.push PS.$surround { first: 'first--', last: '--last', before: '(', between: ',', after: ')' }
+  pipeline.push PS.$surround { first: '[', last: ']', before: '(', between: ',', after: ')' }
+  pipeline.push PS.$surround { first: 'first', last: 'last', }
+  # pipeline.push PS.$surround { first: 'first', last: 'last', before: 'before', between: 'between', after: 'after' }
+  # pipeline.push PS.$surround { first: '[', last: ']', }
   #.........................................................................................................
+  pipeline.push PS.$collect()
+  pipeline.push $ ( d, send ) -> send ( x.toString() for x in d ).join ''
+  pipeline.push PS.$show()
+  pipeline.push PS.$drain drainer
+  PS.pull pipeline...
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+async_with_first_and_last = ->
+  drainer   = -> help 'ok'
+  pipeline  = []
+  pipeline.push PS.new_value_source [ 1 .. 3 ]
+  #.........................................................................................................
+  pipeline.push PS.$surround { first: 'first', last: 'last', }
+  pipeline.push $async { first: '[', last: ']', between: '|', }, ( d, send, done ) =>
+    defer ->
+      # debug '22922', jr d
+      send d
+      done()
+  #.........................................................................................................
+  # pipeline.push PS.$watch ( d ) -> urge '20292', d
   pipeline.push PS.$collect()
   pipeline.push $ ( d, send ) -> send ( x.toString() for x in d ).join ''
   pipeline.push PS.$show()
@@ -261,7 +287,8 @@ unless module.parent?
   # demo_through()
   # async_with_end_detection()
   # async_with_end_detection_2()
-  sync_with_first_and_last()
+  # sync_with_first_and_last()
+  async_with_first_and_last()
 
 
 
