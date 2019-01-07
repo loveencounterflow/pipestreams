@@ -2,6 +2,26 @@
 
 ### Basics
 
+#### Sources, Transforms, Sinks
+
+#### Remit, the Fundamental Method to Make Transforms
+
+```
+PS = require 'pipestreams'
+{ $, $async, } = PS
+
+f = ->
+	pipeline = []
+	pipeline.push PS.new_value_source [ 1, 2, 3, ]
+	pipeline.push $ ( d, send ) ->
+		send d
+		send d * 2
+	pipeline.push PS.$show()
+	pipeline.push PS.$drain -> console.log 'ok'
+
+f()
+```
+
 #### Surround
 
 The `$surround()` transform expects a JS object with one or more of the
