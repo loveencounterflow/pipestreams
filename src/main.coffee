@@ -260,6 +260,7 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
   return @$pass() if methods.length is 0
   for method, idx in methods
     continue if ( type = CND.type_of method ) is 'function'
+    continue if CND.isa_pod method ### allowing for `{ x.source, x.sink, }` duplex streams ###
     throw new Error "µ25478 expected a function, got a #{type} for argument # #{idx + 1}"
   return pull methods...
 

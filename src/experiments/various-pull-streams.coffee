@@ -277,6 +277,105 @@ async_with_first_and_last = ->
   #.........................................................................................................
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+pull_pair_1 = ->
+  new_pair    = require 'pull-pair'
+  pair        = new_pair()
+  pipeline_1  = []
+  pipeline_2  = []
+  #.........................................................................................................
+  # read values into this sink...
+  pipeline_1.push PS.new_value_source [ 1, 2, 3, ]
+  pipeline_1.push PS.$watch ( d ) -> urge d
+  pipeline_1.push pair.sink
+  PS.pull pipeline_1...
+  #.........................................................................................................
+  # but that should become the source over here.
+  pipeline_2.push pair.source
+  pipeline_2.push PS.$collect()
+  pipeline_2.push PS.$show()
+  pipeline_2.push PS.$drain()
+  #.........................................................................................................
+  PS.pull pipeline_2...
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+pull_pair_2 = ->
+  new_pair    = require 'pull-pair'
+  #.........................................................................................................
+  f = ->
+    pair        = new_pair()
+    pushable    = PS.new_push_source()
+    pipeline_1  = []
+    #.......................................................................................................
+    pipeline_1.push pair.source
+    pipeline_1.push PS.$surround before: '(', after: ')', between: '-'
+    pipeline_1.push PS.$join()
+    pipeline_1.push PS.$show title: 'substream'
+    pipeline_1.push PS.$watch ( d ) -> pushable.push d
+    pipeline_1.push PS.$drain()
+    #.......................................................................................................
+    PS.pull pipeline_1...
+    return { sink: pair.sink, source: pushable, }
+  #.........................................................................................................
+  pipeline = []
+  pipeline.push PS.new_value_source "just a few words".split /\s/
+  pipeline.push PS.$watch ( d ) -> whisper d
+  pipeline.push f()
+  pipeline.push PS.$show title: 'mainstream'
+  pipeline.push PS.$drain()
+  PS.pull pipeline...
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+duplex_stream_3 = ->
+  new_duplex_pair     = require 'pull-pair/duplex'
+  [ client, server, ] = new_duplex_pair()
+  pipeline_1          = []
+  pipeline_2          = []
+  #.........................................................................................................
+  pipeline_1.push PS.new_value_source [ 1, 2, 3, ]
+  pipeline_1.push client
+  pipeline_1.push PS.$collect()
+  pipeline_1.push PS.$show()
+  # pipeline_1.push client
+  pipeline_1.push PS.$drain()
+  PS.pull pipeline_1...
+  #.........................................................................................................
+  # pipe the second duplex stream back to itself.
+  pipeline_2.push server
+  pipeline_2.push PS.$watch ( d ) -> urge d
+  pipeline_2.push $ ( d, send ) -> send d * 10
+  pipeline_2.push server
+  PS.pull pipeline_2...
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+duplex_stream_4 = ->
+  new_duplex_pair     = require 'pull-pair/duplex'
+  [ client, server, ] = new_duplex_pair()
+  pipeline_1          = []
+  pipeline_2          = []
+  #.........................................................................................................
+  pipeline_1.push PS.new_value_source [ 1, 2, 3, ]
+  pipeline_1.push client
+  pipeline_1.push PS.$collect()
+  pipeline_1.push PS.$show()
+  # pipeline_1.push client
+  pipeline_1.push PS.$drain()
+  PS.pull pipeline_1...
+  #.........................................................................................................
+  # pipe the second duplex stream back to itself.
+  pipeline_2.push server
+  pipeline_2.push PS.$watch ( d ) -> urge d
+  pipeline_2.push $ ( d, send ) -> send d * 10
+  pipeline_2.push server
+  pipeline_1.push PS.$drain()
+  PS.pull pipeline_2...
+  #.........................................................................................................
+  return null
+
 
 ############################################################################################################
 unless module.parent?
@@ -288,7 +387,11 @@ unless module.parent?
   # async_with_end_detection()
   # async_with_end_detection_2()
   # sync_with_first_and_last()
-  async_with_first_and_last()
+  # async_with_first_and_last()
+  # pull_pair_1()
+  pull_pair_2()
+  # duplex_stream_3()
+  # duplex_stream_4()
 
 
 
