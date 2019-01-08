@@ -41,69 +41,33 @@ defer                     = setImmediate
   return @pull pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
-@$wye = ( bysource ) ->
-  bystream_started  = false
+@$wye = ( bystream ) ->
+  pair              = ( require 'pull-pair' )()
+  pushable          = @new_push_source()
+  subline           = []
+  byline            = []
+  end_sym           = Symbol 'end'
   bystream_ended    = false
-  send              = null
-  done              = null
-  buffer            = []
-  stack             = ( x ) => buffer.unshift x
-  pop               = => send buffer.pop() if buffer.length > 0
-  flush             = => send buffer.pop() while buffer.length > 0
-  last_sym_1        = Symbol 'last'
-  last_sym_2        = Symbol 'last'
+  substream_ended   = false
   #.........................................................................................................
-  bystream          = []
-  bystream.push bysource
-  bystream.push @$async { last: last_sym_1, }, ( d, _send, _done ) =>
-    if d isnt last_sym_1
-      ### When `done` is defined, mainstream has ended, but `done` has not been called, meaning we can
-      send directly (but avoid calling `done` yet); otherwise, we buffer the data: ###
-      if done?
-        send  d
-      else
-        stack d
+  subline.push pair.source
+  subline.push @$ { last: end_sym, }, ( d, send ) ->
+    if d is end_sym
+      substream_ended = true
+      pushable.end() if bystream_ended
     else
-      ### When bystream and mainstream have both ended, `done` will be defined,
-      so we flush out any remaining data, then call `done`: ###
+      pushable.push d
+  subline.push @$drain()
+  #.........................................................................................................
+  byline.push bystream
+  byline.push @$ { last: end_sym, }, ( d, send ) ->
+    if d is end_sym
       bystream_ended = true
-      if done?
-        flush()
-        done()
-    _done()
-    return null
-  bystream.push @$drain()
-  #.........................................................................................................
-  mainstream        = []
-  mainstream.push @$async { last: last_sym_2, }, ( d, _send, _done ) =>
-    ### `send` and `done` are shared within this method and will be needed to send values from bystream
-    if it terminates later than mainstream: ###
-    send = _send
-    done = _done
-    #.......................................................................................................
-    unless bystream_started
-      ### In case bystream has not yeen been started, do that now: ###
-      bystream_started = true
-      @pull bystream...
-    #.......................................................................................................
-    unless d is last_sym_2
-      ### In case there's mainstream data, flush out any bystream data, send d, call `done` and
-      un-define it: ###
-      # flush()
-      send d
-      pop()
-      done()
-      done = null
+      pushable.end() if substream_ended
     else
-      ### In case mainstream data is `null`, mainstream has terminated. If bystream has been terminated
-      as well, call `done` and un-define it: ###
-      flush()
-      if bystream_ended
-        defer -> send null
-        done()
-        done = null
-    #.......................................................................................................
-    return null
+      send d
   #.........................................................................................................
-  R = @pull mainstream...
-  return R
+  @pull subline...
+  confluence = @$merge pushable, @pull byline...
+  return { sink: pair.sink, source: confluence, }
+

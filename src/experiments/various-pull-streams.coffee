@@ -17,7 +17,8 @@ echo                      = CND.echo.bind CND
 PS                        = require '../..'
 { $, $async, }            = PS
 #...........................................................................................................
-after                     = ( dts, f ) -> setTimeout f, dts * 1000
+after                     = ( dts, f ) -> setTimeout  f, dts * 1000
+every                     = ( dts, f ) -> setInterval f, dts * 1000
 defer                     = setImmediate
 { jr
   is_empty }              = CND
@@ -415,6 +416,29 @@ wye_2 = ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
+wye_3 = ->
+  new_pair    = require 'pull-pair'
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    byline    = []
+    byline.push PS.new_random_async_value_source 0.1, [ 3 .. 8 ]
+    byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+    #.......................................................................................................
+    mainline = []
+    mainline.push PS.new_random_async_value_source "just a few words".split /\s/
+    mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+    mainline.push PS.$wye PS.pull byline...
+    mainline.push PS.$show title: 'confluence'
+    mainline.push PS.$collect()
+    mainline.push PS.$show title: 'mainstream'
+    mainline.push PS.$drain -> help 'ok'; resolve()
+    PS.pull mainline...
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
 duplex_stream_3 = ->
   new_duplex_pair     = require 'pull-pair/duplex'
   [ client, server, ] = new_duplex_pair()
@@ -438,31 +462,6 @@ duplex_stream_3 = ->
   #.........................................................................................................
   return null
 
-#-----------------------------------------------------------------------------------------------------------
-duplex_stream_4 = ->
-  new_duplex_pair     = require 'pull-pair/duplex'
-  [ client, server, ] = new_duplex_pair()
-  pipeline_1          = []
-  pipeline_2          = []
-  #.........................................................................................................
-  pipeline_1.push PS.new_value_source [ 1, 2, 3, ]
-  pipeline_1.push client
-  pipeline_1.push PS.$collect()
-  pipeline_1.push PS.$show()
-  # pipeline_1.push client
-  pipeline_1.push PS.$drain()
-  PS.pull pipeline_1...
-  #.........................................................................................................
-  # pipe the second duplex stream back to itself.
-  pipeline_2.push server
-  pipeline_2.push PS.$watch ( d ) -> urge d
-  pipeline_2.push $ ( d, send ) -> send d * 10
-  pipeline_2.push server
-  pipeline_1.push PS.$drain()
-  PS.pull pipeline_2...
-  #.........................................................................................................
-  return null
-
 
 ############################################################################################################
 unless module.parent?
@@ -478,9 +477,9 @@ unless module.parent?
   # pull_pair_1()
   # pull_pair_2()
   # wye_1()
-  wye_2()
+  # wye_2()
+  wye_3()
   # duplex_stream_3()
-  # duplex_stream_4()
 
 
 
