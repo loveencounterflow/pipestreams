@@ -328,6 +328,93 @@ pull_pair_2 = ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
+wye_1 = ->
+  new_pair    = require 'pull-pair'
+  #.........................................................................................................
+  $wye = ( bystream ) ->
+    pair        = new_pair()
+    pushable    = PS.new_push_source()
+    pipeline_1  = []
+    pipeline_2  = []
+    #.......................................................................................................
+    pipeline_1.push pair.source
+    pipeline_1.push PS.$surround before: '(', after: ')', between: '-'
+    # pipeline_1.push PS.$join()
+    pipeline_1.push PS.$show title: 'substream'
+    pipeline_1.push PS.$watch ( d ) -> pushable.push d
+    pipeline_1.push PS.$drain -> urge "substream ended"
+    #.......................................................................................................
+    pipeline_2.push bystream
+    pipeline_2.push $ { last: null, }, ( d, send ) -> urge "bystream ended" unless d?; send d
+    pipeline_2.push PS.$show title: 'bystream'
+    #.......................................................................................................
+    PS.pull pipeline_1...
+    confluence = PS.$merge pushable, PS.pull pipeline_2...
+    return { sink: pair.sink, source: confluence, }
+  #.........................................................................................................
+  bysource = PS.new_value_source [ 3 .. 7 ]
+  pipeline = []
+  pipeline.push PS.new_value_source "just a few words".split /\s/
+  # pipeline.push PS.$watch ( d ) -> whisper d
+  pipeline.push $wye bysource
+  pipeline.push PS.$collect()
+  pipeline.push PS.$show title: 'mainstream'
+  pipeline.push PS.$drain -> help 'ok'
+  PS.pull pipeline...
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+wye_2 = ->
+  new_pair    = require 'pull-pair'
+  #.........................................................................................................
+  $wye = ( bystream ) ->
+    pair              = new_pair()
+    pushable          = PS.new_push_source()
+    subline           = []
+    byline            = []
+    end_sym           = Symbol 'end'
+    bystream_ended    = false
+    substream_ended   = false
+    #.......................................................................................................
+    subline.push pair.source
+    subline.push $ { last: end_sym, }, ( d, send ) ->
+      if d is end_sym
+        substream_ended = true
+        pushable.end() if bystream_ended
+      else
+        pushable.push d
+    subline.push PS.$drain()
+    #.......................................................................................................
+    byline.push bystream
+    byline.push $ { last: end_sym, }, ( d, send ) ->
+      if d is end_sym
+        bystream_ended = true
+        pushable.end() if substream_ended
+      else
+        send d
+    #.......................................................................................................
+    PS.pull subline...
+    confluence = PS.$merge pushable, PS.pull byline...
+    return { sink: pair.sink, source: confluence, }
+  #.........................................................................................................
+  demo = ->
+    return new Promise ( resolve ) ->
+      byline = []
+      byline.push PS.new_value_source [ 3 .. 7 ]
+      byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+      #.......................................................................................................
+      mainline = []
+      mainline.push PS.new_value_source "just a few words".split /\s/
+      mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+      mainline.push $wye PS.pull byline...
+      mainline.push PS.$collect()
+      mainline.push PS.$show title: 'mainstream'
+      mainline.push PS.$drain -> help 'ok'; resolve()
+      PS.pull mainline...
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
 duplex_stream_3 = ->
   new_duplex_pair     = require 'pull-pair/duplex'
   [ client, server, ] = new_duplex_pair()
@@ -389,7 +476,9 @@ unless module.parent?
   # sync_with_first_and_last()
   # async_with_first_and_last()
   # pull_pair_1()
-  pull_pair_2()
+  # pull_pair_2()
+  # wye_1()
+  wye_2()
   # duplex_stream_3()
   # duplex_stream_4()
 
