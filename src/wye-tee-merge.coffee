@@ -56,7 +56,7 @@ defer                     = setImmediate
       substream_ended = true
       pushable.end() if bystream_ended
     else
-      pushable.push d
+      pushable.send d
   subline.push @$drain()
   #.........................................................................................................
   byline.push bystream
@@ -70,4 +70,6 @@ defer                     = setImmediate
   @pull subline...
   confluence = @$merge pushable, @pull byline...
   return { sink: pair.sink, source: confluence, }
+
+
 
