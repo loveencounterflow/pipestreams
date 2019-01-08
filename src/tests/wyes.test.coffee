@@ -170,7 +170,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "_$wye 3" ] = ( T, done ) ->
+@[ "$wye 3" ] = ( T, done ) ->
   probes_and_matchers = [
     [{start_value:0.5,delta: 0.01},["a",1,"b",2,"c",3,4,5,6],null]
     ]
@@ -199,17 +199,17 @@ new_filtered_bysink = ( name, collector, filter ) ->
       mainstream.push PS.$ ( d, send ) ->
         send d
         if probe.min <= d <= probe.max
-          mainsource.end()
+          bysource.send null
           send null
         else
           debug d
-          bysource.push ( 1 - d ) / 2
+          bysource.send ( 1 - d ) / 2
       mainstream.push PS.$defer()
       mainstream.push PS.$watch ( d ) -> urge CND.white '10191-4', 'confluence', jr d
       mainstream.push PS.$watch ( d ) -> R.push d
       mainstream.push PS.$drain drainer
       PS.pull mainstream...
-      mainsource.push probe.start_value
+      mainsource.send probe.start_value
       return null
   return null
 

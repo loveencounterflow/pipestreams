@@ -69,7 +69,8 @@ symbols =
   source  = ( require 'pull-pushable' )()
   R       = ( P... ) -> source P...
     # buffer:     source.buffer
-  R.push  = ( ( d ) -> if d? then source.push d else source.end() ).bind R
+  R.push  = ( ( d ) -> warn "µ38722 Deprecation Warning: use `.send()` instead of `.push()`"; R.send d ).bind R
+  R.send  = ( ( d ) -> if d? then source.push d else source.end() ).bind R
   R.end   = ( ( P... ) -> source.end  P...                        ).bind R
     # read:       ( P... ) ->  P...
   return R
@@ -95,11 +96,11 @@ symbols =
   #.........................................................................................................
   tick = ->
     if idx <= last_idx
-      R.push values[ idx ]
+      R.send values[ idx ]
       idx += +1
       after new_timeout(), tick
     else
-      R.push null
+      R.send null
     return null
   #.........................................................................................................
   after new_timeout(), tick
