@@ -21,7 +21,6 @@ FS                        = require 'fs'
 CP                        = require 'child_process'
 glob                      = require 'globby'
 #...........................................................................................................
-_new_push_source          = require 'pull-pushable'
 $pass_through             = require 'pull-stream/throughs/through'
 $pull_drain               = require 'pull-stream/sinks/drain'
 $values                   = require 'pull-stream/sources/values'
@@ -31,7 +30,8 @@ pull_through              = require 'pull-through'
 pull_cont                 = require 'pull-cont'
 _map_errors               = require './_map_errors'
 #...........................................................................................................
-after                     = ( dts, f ) -> setTimeout f, dts * 1000
+after                     = ( dts, f ) -> setTimeout  f, dts * 1000
+every                     = ( dts, f ) -> setInterval f, dts * 1000
 defer                     = setImmediate
 return_id                 = ( x ) -> x
 { is_empty
@@ -66,9 +66,43 @@ symbols =
 @new_push_source = ->
   ### Return a `pull-streams` `pushable`. Methods `push` and `end` will be bound to the instance
   so they can be freely passed around. ###
-  R       = _new_push_source()
-  R.push  = R.push.bind R
-  R.end   = R.end.bind R
+  source  = ( require 'pull-pushable' )()
+  R       = ( P... ) -> source P...
+    # buffer:     source.buffer
+  R.push  = ( ( d ) -> if d? then source.push d else source.end() ).bind R
+  R.end   = ( ( P... ) -> source.end  P...                        ).bind R
+    # read:       ( P... ) ->  P...
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@new_random_async_value_source = ( dts, values ) ->
+  ### Given an optional delta time in seconds `dts` (which defaults to 0.1 seconds) and a list of values,
+  return a source that will asynchronously produce values at irregular intervals that randomly oscillate
+  around `dts`. ###
+  switch arity = arguments.length
+    when 1 then [ dts, values, ] = [ 0.1, dts, ]
+    when 2 then null
+    else throw new Error "µ77749 expected 1 or 2 arguments, got #{arity}"
+  #.........................................................................................................
+  R           = @new_push_source()
+  new_timeout = -> ( Math.random() + 0.001 ) * dts
+  #.........................................................................................................
+  idx         = 0
+  last_idx    = values.length - 1
+  #.........................................................................................................
+  unless ( CND.isa_number last_idx )
+    throw new Error "µ89231 expected a list-like object, got a #{CND.type_of values}"
+  #.........................................................................................................
+  tick = ->
+    if idx <= last_idx
+      R.push values[ idx ]
+      idx += +1
+      after new_timeout(), tick
+    else
+      R.push null
+    return null
+  #.........................................................................................................
+  after new_timeout(), tick
   return R
 
 #-----------------------------------------------------------------------------------------------------------
