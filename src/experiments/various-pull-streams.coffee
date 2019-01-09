@@ -417,7 +417,6 @@ wye_2 = ->
 
 #-----------------------------------------------------------------------------------------------------------
 wye_3 = ->
-  new_pair    = require 'pull-pair'
   #.........................................................................................................
   demo = -> new Promise ( resolve ) ->
     byline    = []
@@ -429,6 +428,37 @@ wye_3 = ->
     mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
     mainline.push PS.$wye PS.pull byline...
     mainline.push PS.$show title: 'confluence'
+    mainline.push PS.$collect()
+    mainline.push PS.$show title: 'mainstream'
+    mainline.push PS.$drain -> help 'ok'; resolve()
+    PS.pull mainline...
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+wye_4 = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    bysource  = PS.new_push_source()
+    byline    = []
+    byline.push bysource
+    byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+    bystream = PS.pull byline...
+    #.......................................................................................................
+    mainline = []
+    mainline.push PS.new_value_source [ 5, 7, ]
+    mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+    mainline.push PS.$wye bystream
+    mainline.push PS.$show title: 'confluence'
+    mainline.push $ ( d, send ) ->
+      if d < 1.001
+        send null
+      else
+        send d
+        bysource.send Math.sqrt d
+    mainline.push PS.$map ( d ) -> d.toFixed 3
     mainline.push PS.$collect()
     mainline.push PS.$show title: 'mainstream'
     mainline.push PS.$drain -> help 'ok'; resolve()
@@ -478,8 +508,9 @@ unless module.parent?
   # pull_pair_2()
   # wye_1()
   # wye_2()
-  wye_3()
-  # duplex_stream_3()
+  # wye_3()
+  # wye_4()
+  duplex_stream_3()
 
 
 
