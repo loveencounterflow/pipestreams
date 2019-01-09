@@ -65,8 +65,8 @@ defer                     = setImmediate
       PS.pull pipeline_3...
       max_idx = ( Math.max probe[ 0 ].length, probe[ 1 ].length ) - 1
       for idx in [ 0 .. max_idx ]
-        source_1.push x if ( x = probe[ 0 ][ idx ] )?
-        source_2.push x if ( x = probe[ 1 ][ idx ] )?
+        source_1.send x if ( x = probe[ 0 ][ idx ] )?
+        source_2.send x if ( x = probe[ 1 ][ idx ] )?
       source_1.end()
       source_2.end()
     done()
@@ -115,8 +115,8 @@ new_filtered_bysink = ( name, collector, filter ) ->
       #...................................................................................................
       max_idx = ( Math.max probe[ 0 ].length, probe[ 1 ].length ) - 1
       for idx in [ 0 .. max_idx ]
-        source_1.push x if ( x = probe[ 0 ][ idx ] )?
-        source_2.push x if ( x = probe[ 1 ][ idx ] )?
+        source_1.send x if ( x = probe[ 0 ][ idx ] )?
+        source_2.send x if ( x = probe[ 1 ][ idx ] )?
       source_1.end()
       source_2.end()
   done()
@@ -161,8 +161,8 @@ new_filtered_bysink = ( name, collector, filter ) ->
         PS.pull mainstream...
         max_idx = ( Math.max mainstream_values.length, bystream_values.length ) - 1
         for idx in [ 0 .. max_idx ]
-          mainsource.push x if ( x = mainstream_values[ idx ] )?
-          bysource.push   x if ( x = bystream_values[   idx ] )?
+          mainsource.send x if ( x = mainstream_values[ idx ] )?
+          bysource.send   x if ( x = bystream_values[   idx ] )?
         mainsource.end()
         bysource.end()
         return null
@@ -170,10 +170,124 @@ new_filtered_bysink = ( name, collector, filter ) ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
+@divert = ( T, done ) ->
+  probes_and_matchers = [
+    [[10,11,12,13,14,15,16,17,18,19,20],{"odd_numbers":[11,13,15,17,19],"all_numbers":[10,11,12,13,14,15,16,17,18,19,20]},null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    #.......................................................................................................
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      is_odd      = ( d ) -> ( d % 2 ) isnt 0
+      odd_numbers = []
+      all_numbers = []
+      R           = { odd_numbers, all_numbers, }
+      #.....................................................................................................
+      byline      = []
+      mainline    = []
+      #.....................................................................................................
+      byline.push PS.$show title: 'bystream'
+      byline.push PS.$watch ( d ) -> odd_numbers.push d
+      byline.push PS.$drain()
+      bystream  = PS.pull byline...
+      #.....................................................................................................
+      mainline.push PS.new_value_source probe
+      mainline.push PS.$tee is_odd, bystream
+      mainline.push PS.$show title: 'mainstream'
+      mainline.push PS.$watch ( d ) -> all_numbers.push d
+      mainline.push PS.$drain ->
+        help 'ok'
+        resolve R
+      PS.pull mainline...
+      #.....................................................................................................
+      return null
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@bifurcate = ( T, done ) ->
+  probes_and_matchers = [
+    [[10,11,12,13,14,15,16,17,18,19,20],{"odd_numbers":[11,13,15,17,19],"even_numbers":[10,12,14,16,18,20]},null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    #.......................................................................................................
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      is_even       = ( d ) -> ( d % 2 ) is 0
+      odd_numbers   = []
+      even_numbers  = []
+      R             = { odd_numbers, even_numbers, }
+      #.....................................................................................................
+      byline        = []
+      mainline      = []
+      #.....................................................................................................
+      byline.push PS.$show title: 'bystream'
+      byline.push PS.$watch ( d ) -> even_numbers.push d
+      byline.push PS.$drain()
+      bystream  = PS.pull byline...
+      #.....................................................................................................
+      mainline.push PS.new_value_source probe
+      mainline.push PS.$bifurcate is_even, bystream
+      mainline.push PS.$show title: 'mainstream'
+      mainline.push PS.$watch ( d ) -> odd_numbers.push d
+      mainline.push PS.$drain ->
+        help 'ok'
+        resolve R
+      PS.pull mainline...
+      #.....................................................................................................
+      return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "wye from asnyc random sources" ] = ( T, done ) ->
+  ### A mainstream and a bystream are created from lists of values using
+  `PS.new_random_async_value_source()`. Values from both streams are marked up for their respective source.
+  After being funnelled together using `PS.$wye()`, the result is a POD whose keys are the source names
+  and whose values are lists of the values in the order they were seen. The expected result is that the
+  ordering of each stream is preserved, no values get lost, and that relative ordering of values in the
+  mainstream and the bystream is arbitrary. ###
+  probes_and_matchers = [
+    [[[3,4,5,6,7,8],["just","a","few","words"]],{"bystream":[3,4,5,6,7,8],"mainstream":["just","a","few","words"]},null]
+    [[[3,4],[9,10,11,true]],{"bystream":[3,4],"mainstream":[9,10,11,true]},null]
+    [[[3,4,{"foo":"bar"}],[false,9,10,11,true]],{"bystream":[3,4,{"foo":"bar"}],"mainstream":[false,9,10,11,true]},null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    R = null
+    #.......................................................................................................
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      byline    = []
+      byline.push PS.new_random_async_value_source 0.1, probe[ 0 ]
+      byline.push $ ( d, send ) -> send [ 'bystream', d, ]
+      # byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+      #.....................................................................................................
+      mainline = []
+      mainline.push PS.new_random_async_value_source probe[ 1 ]
+      mainline.push $ ( d, send ) -> send [ 'mainstream', d, ]
+      mainline.push PS.$wye PS.pull byline...
+      mainline.push PS.$collect()
+      mainline.push PS.$watch ( d ) ->
+        R       = { bystream: [], mainstream: [], }
+        R[ x[ 0 ] ].push x[ 1 ] for x in d
+      mainline.push PS.$drain ->
+        help 'ok'
+        resolve R
+      PS.pull mainline...
+      #.....................................................................................................
+      return null
+  #.........................................................................................................
+  done()
+  return null
+
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "$wye 3" ] = ( T, done ) ->
   probes_and_matchers = [
-    [{start_value:0.5,delta: 0.01},["a",1,"b",2,"c",3,4,5,6],null]
+    [{"start_value":0.5,"delta":0.01,"min":0.3233333333333333,"max":0.3433333333333333},[0.5,0.25,0.375,0.3125,0.34375,0.328125],null]
     ]
+  end_sym = Symbol 'end'
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     probe.min = 1 / 3 - probe.delta
@@ -186,24 +300,30 @@ new_filtered_bysink = ( name, collector, filter ) ->
       #...................................................................................................
       bystream            = []
       bystream.push bysource
+      bystream.push $ { last: end_sym,}, ( d, send ) ->
+        if d is end_sym
+          debug '22092', "bystream ended"
+        else
+          send d
+        return null
       bystream.push PS.$watch ( d ) -> whisper '10191-1', 'bysource', jr d
       bystream = PS.pull bystream...
       #...................................................................................................
       mainstream          = []
       mainstream.push mainsource
-      mainstream.push PS.$watch ( d ) -> whisper '10191-2', 'mainstream', jr d
-      # mainstream.push PS.$drain()
       mainstream.push PS.$wye bystream
-      mainstream.push PS.$watch ( d ) -> whisper '10191-3', 'mainstream', jr d
-      # mainstream.push PS.$defer()
-      mainstream.push PS.$ ( d, send ) ->
+      mainstream.push PS.$async ( d, send, done ) ->
         send d
         if probe.min <= d <= probe.max
-          bysource.send null
-          send null
+          defer ->
+            send null
+            bysource.send null
+            done()
         else
-          debug d
-          bysource.send ( 1 - d ) / 2
+          defer ->
+            bysource.send ( 1 - d ) / 2
+            done()
+        return null
       mainstream.push PS.$defer()
       mainstream.push PS.$watch ( d ) -> urge CND.white '10191-4', 'confluence', jr d
       mainstream.push PS.$watch ( d ) -> R.push d
@@ -211,16 +331,18 @@ new_filtered_bysink = ( name, collector, filter ) ->
       PS.pull mainstream...
       mainsource.send probe.start_value
       return null
+  done()
   return null
-
-
 
 
 ############################################################################################################
 unless module.parent?
-  # test @
+  test @
   # test @[ "$merge 1" ]
   # test @[ "$wye 1" ]
   # test @[ "$wye 2" ]
-  test @[ "$wye 3" ]
+  # test @[ "$wye 3" ]
+  # test @divert
+  # test @bifurcate
+  # test @[ "wye from asnyc random sources" ]
 

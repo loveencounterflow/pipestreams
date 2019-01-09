@@ -19,11 +19,37 @@ mux                       = require 'pull-mux' ### https://github.com/nichoth/pu
 defer                     = setImmediate
 
 #-----------------------------------------------------------------------------------------------------------
-@$tee = ( stream ) ->
-  ### **NB** that in contradistinction to `pull-tee`, you can only divert to a single by-stream with each
-  call to `PS.$tee` ###
-  # R = if ( CND.isa_list stream_or_pipeline ) then ( pull stream_or_pipeline ) else stream_or_pipeline
-  return ( require 'pull-tee' ) stream
+@$tee = ( a, b ) ->
+  switch ( arity = arguments.length )
+    when 1 then return @_$tee_without_filter  a
+    when 2 then return @_$tee_with_filter     a, b
+  throw new Error "µ93002 expected 1 or 2 arguments, got #{arity}"
+
+#-----------------------------------------------------------------------------------------------------------
+@_$tee_without_filter = ( bystream ) ->
+  ### Given a `bystream`, send a data down both the mainstream and the bystream. This allows e.g. to log all
+  events to a file sink while continuing to process the same data in the mainline. **NB** that in
+  contradistinction to `pull-tee`, you can only divert to a single by-stream with each call to `PS.$tee` ###
+  return ( require 'pull-tee' ) bystream
+
+#-----------------------------------------------------------------------------------------------------------
+@_$tee_with_filter = ( filter, bystream ) ->
+  ### Given a `filter` function and a `bystream`, send only data `d` for which `filter d` returns true down
+  the bystream. No data will be taken out of the mainstream. ###
+  return @_$tee_without_filter @pull ( @$filter filter ), bystream
+
+#-----------------------------------------------------------------------------------------------------------
+@$bifurcate = ( filter, bystream ) ->
+  ### Given a `filter` function and a `bystream`, send all data `d` either down the bystream if `filter d`
+  returns true, or down the mainstream otherwise, causing a disjunct bifurcation of the data stream. ###
+  byline    = []
+  pipeline  = []
+  byline.push @$ ( d, send ) -> send d[ 1 ] if d[ 0 ]
+  byline.push bystream
+  pipeline.push @$ ( d, send ) -> send [ ( filter d ), d, ]
+  pipeline.push @_$tee_without_filter @pull byline...
+  pipeline.push @$ ( d, send ) -> send d[ 1 ] if not d[ 0 ]
+  return @pull pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
 @$merge = ( sources... ) ->
