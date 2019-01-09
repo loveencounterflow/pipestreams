@@ -356,7 +356,7 @@ do ->
   for path in paths
     module = require path
     for key, value of module
-      continue if key.startsWith '_'
+      # continue if key.startsWith '_'
       throw new Error "duplicate key #{rpr key}" if L[ key ]?
       L[ key ] = value
   #.........................................................................................................
