@@ -416,7 +416,7 @@ wye_2 = ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-wye_3 = ->
+wye_3a = ->
   #.........................................................................................................
   demo = -> new Promise ( resolve ) ->
     byline    = []
@@ -427,6 +427,42 @@ wye_3 = ->
     mainline.push PS.new_random_async_value_source "just a few words".split /\s/
     mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
     mainline.push PS.$wye PS.pull byline...
+    mainline.push PS.$show title: 'confluence'
+    mainline.push PS.$collect()
+    mainline.push PS.$show title: 'mainstream'
+    mainline.push PS.$drain -> help 'ok'; resolve()
+    PS.pull mainline...
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+wye_3b = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    bysource  = PS.new_push_source()
+    byline    = []
+    byline.push bysource
+    byline.push $ ( d, send ) ->
+      if CND.isa_text d
+        send d.length
+      else
+        send d
+      return null
+    byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+    #.......................................................................................................
+    mainline = []
+    mainline.push PS.new_random_async_value_source "just a few words".split /\s/
+    mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+    mainline.push PS.$wye PS.pull byline...
+    mainline.push $ ( d, send ) ->
+      if CND.isa_text d
+        bysource.send d
+        send d
+      else
+        send d
+      return null
     mainline.push PS.$show title: 'confluence'
     mainline.push PS.$collect()
     mainline.push PS.$show title: 'mainstream'
@@ -508,9 +544,9 @@ unless module.parent?
   # pull_pair_2()
   # wye_1()
   # wye_2()
-  # wye_3()
+  wye_3b()
   # wye_4()
-  duplex_stream_3()
+  # duplex_stream_3()
 
 
 
