@@ -147,10 +147,7 @@ symbols =
       hint      = null
     when 2
       if CND.isa_text hint
-        throw new Error "µ18593 unknown hint #{rpr hint}" unless hint is 'null'
-        warn "µ30902 Deprecation Warning: use `{last:null}` instead of `'null'`"
-        process.exit 1
-        settings.last = null
+        throw new Error "µ30902 Deprecated: use `{last:null}` instead of `'null'`"
       else
         settings = assign settings, hint
     else throw new Error "µ19358 expected 1 or 2 arguments, got #{arity}"
