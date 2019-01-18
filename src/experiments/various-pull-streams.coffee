@@ -41,7 +41,8 @@ demo_merge_1 = ->
   # pipeline.push merge ( pull.values [ 1, 5, 6, ] ), ( pull.values [] )
   # pipeline.push merge ( pull.values [ 1, 5, 6, ] ), ( pull.values [ 1, 5, 6, ] )
   # pipeline.push merge ( pull.values [ [1], [5], [6], ] ), ( pull.values [ [1], [5], [6], [7], ] )
-  pipeline.push merge ( pull.values [ 1, 5, 6, ] ), ( pull.values [ 1, 5, 6, ] ), ( a, b ) -> -1
+  x = +1
+  pipeline.push merge ( pull.values [ 1, 5, 6, ] ), ( pull.values [ 20, 19, 18, 17, ] ), ( a, b ) -> x = -x
   pipeline.push pull.collect ( error, collector ) ->
     throw error if error?
     help collector
@@ -329,115 +330,6 @@ pull_pair_2 = ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-wye_1 = ->
-  new_pair    = require 'pull-pair'
-  #.........................................................................................................
-  $wye = ( bystream ) ->
-    pair        = new_pair()
-    pushable    = PS.new_push_source()
-    pipeline_1  = []
-    pipeline_2  = []
-    #.......................................................................................................
-    pipeline_1.push pair.source
-    pipeline_1.push PS.$surround before: '(', after: ')', between: '-'
-    # pipeline_1.push PS.$join()
-    pipeline_1.push PS.$show title: 'substream'
-    pipeline_1.push PS.$watch ( d ) -> pushable.push d
-    pipeline_1.push PS.$drain -> urge "substream ended"
-    #.......................................................................................................
-    pipeline_2.push bystream
-    pipeline_2.push $ { last: null, }, ( d, send ) -> urge "bystream ended" unless d?; send d
-    pipeline_2.push PS.$show title: 'bystream'
-    #.......................................................................................................
-    PS.pull pipeline_1...
-    confluence = PS.$merge pushable, PS.pull pipeline_2...
-    return { sink: pair.sink, source: confluence, }
-  #.........................................................................................................
-  bysource = PS.new_value_source [ 3 .. 7 ]
-  pipeline = []
-  pipeline.push PS.new_value_source "just a few words".split /\s/
-  # pipeline.push PS.$watch ( d ) -> whisper d
-  pipeline.push $wye bysource
-  pipeline.push PS.$collect()
-  pipeline.push PS.$show title: 'mainstream'
-  pipeline.push PS.$drain -> help 'ok'
-  PS.pull pipeline...
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
-wye_2 = ->
-  new_pair    = require 'pull-pair'
-  #.........................................................................................................
-  $wye = ( bystream ) ->
-    pair              = new_pair()
-    pushable          = PS.new_push_source()
-    subline           = []
-    byline            = []
-    end_sym           = Symbol 'end'
-    bystream_ended    = false
-    substream_ended   = false
-    #.......................................................................................................
-    subline.push pair.source
-    subline.push $ { last: end_sym, }, ( d, send ) ->
-      if d is end_sym
-        substream_ended = true
-        pushable.end() if bystream_ended
-      else
-        pushable.push d
-    subline.push PS.$drain()
-    #.......................................................................................................
-    byline.push bystream
-    byline.push $ { last: end_sym, }, ( d, send ) ->
-      if d is end_sym
-        bystream_ended = true
-        pushable.end() if substream_ended
-      else
-        send d
-    #.......................................................................................................
-    PS.pull subline...
-    confluence = PS.$merge pushable, PS.pull byline...
-    return { sink: pair.sink, source: confluence, }
-  #.........................................................................................................
-  demo = ->
-    return new Promise ( resolve ) ->
-      byline = []
-      byline.push PS.new_value_source [ 3 .. 7 ]
-      byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
-      #.......................................................................................................
-      mainline = []
-      mainline.push PS.new_value_source "just a few words".split /\s/
-      mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
-      mainline.push $wye PS.pull byline...
-      mainline.push PS.$collect()
-      mainline.push PS.$show title: 'mainstream'
-      mainline.push PS.$drain -> help 'ok'; resolve()
-      PS.pull mainline...
-  await demo()
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
-wye_3a = ->
-  #.........................................................................................................
-  demo = -> new Promise ( resolve ) ->
-    byline    = []
-    byline.push PS.new_random_async_value_source 0.1, [ 3 .. 8 ]
-    byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
-    #.......................................................................................................
-    mainline = []
-    mainline.push PS.new_random_async_value_source "just a few words".split /\s/
-    mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
-    mainline.push PS.$wye PS.pull byline...
-    mainline.push PS.$show title: 'confluence'
-    mainline.push PS.$collect()
-    mainline.push PS.$show title: 'mainstream'
-    mainline.push PS.$drain -> help 'ok'; resolve()
-    PS.pull mainline...
-    #.......................................................................................................
-    return null
-  await demo()
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
 wye_3b = ->
   #.........................................................................................................
   demo = -> new Promise ( resolve ) ->
@@ -528,26 +420,342 @@ duplex_stream_3 = ->
   #.........................................................................................................
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+wye_1 = ->
+  new_pair    = require 'pull-pair'
+  #.........................................................................................................
+  $wye = ( bystream ) ->
+    pair        = new_pair()
+    pushable    = PS.new_push_source()
+    pipeline_1  = []
+    pipeline_2  = []
+    #.......................................................................................................
+    pipeline_1.push pair.source
+    pipeline_1.push PS.$surround before: '(', after: ')', between: '-'
+    # pipeline_1.push PS.$join()
+    pipeline_1.push PS.$show title: 'substream'
+    pipeline_1.push PS.$watch ( d ) -> pushable.push d
+    pipeline_1.push PS.$drain -> urge "substream ended"
+    #.......................................................................................................
+    pipeline_2.push bystream
+    pipeline_2.push $ { last: null, }, ( d, send ) -> urge "bystream ended" unless d?; send d
+    pipeline_2.push PS.$show title: 'bystream'
+    #.......................................................................................................
+    PS.pull pipeline_1...
+    confluence = PS.$merge pushable, PS.pull pipeline_2...
+    return { sink: pair.sink, source: confluence, }
+  #.........................................................................................................
+  bysource = PS.new_value_source [ 3 .. 7 ]
+  pipeline = []
+  pipeline.push PS.new_value_source "just a few words".split /\s/
+  # pipeline.push PS.$watch ( d ) -> whisper d
+  pipeline.push $wye bysource
+  pipeline.push PS.$collect()
+  pipeline.push PS.$show title: 'mainstream'
+  pipeline.push PS.$drain -> help 'ok'
+  PS.pull pipeline...
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+wye_2 = ->
+  new_pair    = require 'pull-pair'
+  #.........................................................................................................
+  $wye = ( bystream ) ->
+    pair              = new_pair()
+    pushable          = PS.new_push_source()
+    subline           = []
+    byline            = []
+    end_sym           = Symbol 'end'
+    bystream_ended    = false
+    substream_ended   = false
+    #.......................................................................................................
+    subline.push pair.source
+    subline.push $ { last: end_sym, }, ( d, send ) ->
+      if d is end_sym
+        substream_ended = true
+        pushable.end() if bystream_ended
+      else
+        pushable.push d
+    subline.push PS.$drain()
+    #.......................................................................................................
+    byline.push bystream
+    byline.push $ { last: end_sym, }, ( d, send ) ->
+      if d is end_sym
+        bystream_ended = true
+        pushable.end() if substream_ended
+      else
+        send d
+    #.......................................................................................................
+    PS.pull subline...
+    confluence = PS.$merge pushable, PS.pull byline...
+    return { sink: pair.sink, source: confluence, }
+  #.........................................................................................................
+  demo = ->
+    return new Promise ( resolve ) ->
+      byline = []
+      byline.push PS.new_value_source [ 3 .. 7 ]
+      byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+      #.......................................................................................................
+      mainline = []
+      mainline.push PS.new_value_source "just a few words".split /\s/
+      mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+      mainline.push $wye PS.pull byline...
+      mainline.push PS.$collect()
+      mainline.push PS.$show title: 'mainstream'
+      mainline.push PS.$drain -> help 'ok'; resolve()
+      PS.pull mainline...
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+wye_with_random_value_source = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    byline    = []
+    byline.push PS.new_random_async_value_source 0.1, [ 3 .. 8 ]
+    byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+    #.......................................................................................................
+    mainline = []
+    mainline.push PS.new_random_async_value_source "just a few words".split /\s/
+    mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+    mainline.push PS.$wye PS.pull byline...
+    mainline.push PS.$show title: 'confluence'
+    mainline.push PS.$collect()
+    mainline.push PS.$show title: 'mainstream'
+    mainline.push PS.$drain -> help 'ok'; resolve()
+    PS.pull mainline...
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+wye_with_value_source = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    byline    = []
+    byline.push PS.new_value_source [ 3 .. 8 ]
+    byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+    #.......................................................................................................
+    mainline = []
+    mainline.push PS.new_random_async_value_source "just a few words".split /\s/
+    mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+    mainline.push PS.$wye PS.pull byline...
+    mainline.push PS.$show title: 'confluence'
+    mainline.push PS.$collect()
+    mainline.push PS.$show title: 'mainstream'
+    mainline.push PS.$drain -> help 'ok'; resolve()
+    PS.pull mainline...
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+wye_with_external_push_source = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    bysource  = PS.new_push_source ( error ) -> debug '10203', "Bysource ended"
+    byline    = []
+    byline.push bysource
+    byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+    #.......................................................................................................
+    mainline = []
+    mainline.push PS.new_random_async_value_source "just a few words".split /\s/
+    mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+    mainline.push PS.$wye PS.pull byline...
+    mainline.push PS.$show title: 'confluence'
+    mainline.push PS.$collect()
+    mainline.push PS.$show title: 'mainstream'
+    mainline.push PS.$drain -> help 'ok'; resolve()
+    PS.pull mainline...
+    for x in [ 3 .. 8 ]
+      bysource.send x
+    bysource.send null
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+wye_with_internal_push_source = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    tick = ->
+      process.stdout.write '*'
+      after 0.5, tick
+      return null
+    after 0.5, tick
+    #.......................................................................................................
+    bysource  = PS.new_push_source ( error ) -> debug '10203', "Bysource ended"
+    # bysource  = PS.new_push_source()
+    byline    = []
+    byline.push bysource
+    byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+    #.......................................................................................................
+    mainline = []
+    mainline.push PS.new_random_async_value_source "just a few words".split /\s/
+    mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+    mainline.push PS.$wye PS.pull byline...
+    mainline.push $async ( d, send, done ) ->
+      debug '34844', d
+      send d
+      done() if d isnt 'few'
+    mainline.push PS.$show title: 'confluence'
+    mainline.push $ { last: null, }, ( d, send ) ->
+      debug '10191', CND.green d
+      if d?
+        if CND.isa_text d
+          bysource.send d.length
+          send d
+        else
+          send d
+      else
+        bysource.send null
+      return null
+    mainline.push PS.$defer()
+    mainline.push PS.$collect()
+    mainline.push PS.$show title: 'mainstream'
+    mainline.push PS.$drain -> help 'ok'; resolve()
+    PS.pull mainline...
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+generator_source = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    #.......................................................................................................
+    g = ->
+      for nr in [ 1 ... 10 ]
+        x = yield nr
+        debug '77873', x
+      return null
+    #.......................................................................................................
+    iterator  = g()
+    bysource  = PS.new_generator_source iterator
+    byline    = []
+    byline.push bysource
+    byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+    #.......................................................................................................
+    mainline = []
+    mainline.push PS.new_random_async_value_source "just a few words".split /\s/
+    mainline.push PS.$watch ( d ) -> whisper 'mainstream', jr d
+    mainline.push PS.$wye PS.pull byline...
+    mainline.push PS.$show title: 'confluence'
+    mainline.push PS.$collect()
+    mainline.push PS.$show title: 'mainstream'
+    # mainline.push PS.$drain -> help 'ok'; resolve()
+    urge iterator.next()
+    urge iterator.next 'foo'
+    PS.pull mainline...
+    # for x in [ 3 .. 8 ]
+    #   bysource.send x
+    # bysource.send null
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+demo_alternating_source = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    source_1        = PS.new_push_source()
+    source_2        = PS.new_push_source()
+    pipeline        = []
+    pipeline.push PS.new_alternating_source source_1, source_2
+    pipeline.push PS.$show title: 'pipeline'
+    pipeline.push PS.$drain -> "pipeline terminated"
+    PS.pull pipeline...
+    source_1.send 'a'
+    source_1.send 'b'
+    # source_1.send 'c'
+    source_2.send n for n in [ 1 .. 5 ]
+    info '----'
+    after 1.0, -> whisper "source_1 ended"; source_1.end()
+    after 1.5, -> whisper "source_2 ended"; source_2.end()
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+demo_on_demand_source = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    # mainsource            = PS.new_push_source()
+    mainsource            = PS.new_value_source [ 1 .. 5 ]
+    pipeline              = []
+    on_demand_source      = PS.new_on_demand_source mainsource
+    pipeline.push on_demand_source
+    pipeline.push PS.$watch ( d ) -> info ( if ( CND.type_of d ) is 'symbol' then CND.grey else CND.white ) d
+    pipeline.push PS.$drain -> "pipeline terminated"
+    PS.pull pipeline...
+    # mainsource.send n for n in [ 1 .. 5 ]
+    for nr in [ 1 .. 3 ]
+      on_demand_source.next()
+    # on_demand_source.next()
+    # on_demand_source.next()
+    info '----'
+    # after 1.0, -> whisper "triggersource ended"; triggersource.end()
+    # after 1.5, -> whisper "mainsource ended"; mainsource.end()
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+demo_on_demand_transform = ->
+  $gate = ->
+  #.........................................................................................................
+  demo = -> new Promise ( resolve ) ->
+    # mainsource            = PS.new_push_source()
+    mainsource  = PS.new_value_source [ 1 .. 5 ]
+    pipeline    = []
+    gate        = $gate()
+    pipeline.push mainsource
+    pipeline.push gate
+    pipeline.push PS.$drain -> "pipeline terminated"
+    PS.pull pipeline...
+    for nr in [ 1 .. 3 ]
+      gate.next()
+    # after 1.5, -> whisper "mainsource ended"; mainsource.end()
+    #.......................................................................................................
+    return null
+  await demo()
+  return null
+
 
 ############################################################################################################
 unless module.parent?
-  # demo_merge_1()
-  # demo_merge_async_sources()
-  # demo_mux_async_sources_1()
-  # demo_mux_async_sources_2()
-  # demo_through()
-  # async_with_end_detection()
-  # async_with_end_detection_2()
-  # sync_with_first_and_last()
-  # async_with_first_and_last()
-  # pull_pair_1()
-  # pull_pair_2()
-  # wye_1()
-  # wye_2()
-  wye_3b()
-  # wye_4()
-  # duplex_stream_3()
-
+  do ->
+    # demo_merge_1()
+    # demo_merge_async_sources()
+    # demo_mux_async_sources_1()
+    # demo_mux_async_sources_2()
+    # demo_through()
+    # async_with_end_detection()
+    # async_with_end_detection_2()
+    # sync_with_first_and_last()
+    # async_with_first_and_last()
+    # pull_pair_1()
+    # pull_pair_2()
+    # wye_1()
+    # wye_2()
+    # await wye_with_random_value_source()
+    # await wye_with_value_source()
+    # await wye_with_external_push_source()
+    # await wye_with_internal_push_source()
+    # await generator_source()
+    # await test_continuity()
+    # wye_3b()
+    # wye_4()
+    # duplex_stream_3()
+    # await demo_alternating_source()
+    await demo_on_demand_source()
 
 
 
