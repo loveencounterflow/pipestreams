@@ -63,16 +63,51 @@ symbols =
 @new_value_source = ( values ) -> $values values
 
 #-----------------------------------------------------------------------------------------------------------
-@new_push_source = ->
+@new_push_source = ( P... ) ->
   ### Return a `pull-streams` `pushable`. Methods `push` and `end` will be bound to the instance
   so they can be freely passed around. ###
-  source  = ( require 'pull-pushable' )()
-  R       = ( P... ) -> source P...
-    # buffer:     source.buffer
-  R.push  = ( ( d ) -> warn "µ38722 Deprecation Warning: use `.send()` instead of `.push()`"; R.send d ).bind R
-  R.send  = ( ( d ) -> if d? then source.push d else source.end() ).bind R
-  R.end   = ( ( P... ) -> source.end  P...                        ).bind R
-    # read:       ( P... ) ->  P...
+  new_pushable  = require 'pull-pushable'
+  source        = new_pushable P...
+  R             = ( P... ) -> source P...
+  #.........................................................................................................
+  send = ( d ) ->
+    if d? then  source.push d
+    else        debug '22022 pipstreams/new_push_source ended'; @end()
+    return null
+  #.........................................................................................................
+  end = ( P... ) ->
+    # source.push null
+    source.end P...
+    return null
+  #.........................................................................................................
+  R.send  = send.bind R
+  R.end   = end.bind R
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@new_alternating_source = ( source_a, source_b ) ->
+  ### Given two sources `a` and `b`, return a new source that will emit events
+  from both streams in an interleaved fashion, such that the first data item
+  from `a` is followed from the first item from `b`, followed by the second from
+  `a`, the second from `b` and so on. Once one of the streams has ended, omit
+  the remaining items from the other one, if any, until that stream ends, too.
+  See also https://github.com/tounano/pull-robin. ###
+  merge     = require 'pull-merge'
+  toggle    = +1
+  return merge source_a, source_b, ( -> toggle = -toggle )
+
+#-----------------------------------------------------------------------------------------------------------
+@new_on_demand_source = ( stream ) ->
+  ### Given a stream, return a source `s` with a method `s.next()` such that the next data item from `s`
+  will only be sent as soon as that method is called. ###
+  triggersource   = @new_push_source()
+  pipeline        = []
+  next_sym        = Symbol 'pipestreams:next'
+  pipeline.push @new_alternating_source triggersource, stream
+  pipeline.push @$filter ( d ) -> d isnt next_sym
+  R               = @pull pipeline...
+  R.next          = -> triggersource.send next_sym
+  R.next()
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -208,6 +243,7 @@ symbols =
       method data_last, send
       self = null
       ### somewhat hidden in the docs: *must* call `@queue null` to end stream: ###
+      # defer -> @queue null
       @queue null
       return null
   #.........................................................................................................
@@ -301,9 +337,10 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 @$collect = ( settings ) ->
   throw new Error "µ33128 API changed" if settings?
   collector = []
-  return @$ { last: null, }, ( data, send ) =>
-    if data? then collector.push data
-    else send collector
+  return @$ { last: symbols.last, }, ( data, send ) =>
+    debug '22929', rpr data
+    if data is symbols.last then send collector
+    else collector.push data
     return null
 
 #-----------------------------------------------------------------------------------------------------------
