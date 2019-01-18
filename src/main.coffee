@@ -28,7 +28,7 @@ $paramap                  = require 'pull-paramap'
 pull                      = require 'pull-stream'
 pull_through              = require 'pull-through'
 pull_cont                 = require 'pull-cont'
-_map_errors               = require './_map_errors'
+map                       = require './_map_errors'
 #...........................................................................................................
 after                     = ( dts, f ) -> setTimeout  f, dts * 1000
 every                     = ( dts, f ) -> setInterval f, dts * 1000
@@ -130,7 +130,7 @@ symbols =
     when 1 then null
     else throw new Error "µ17828 method arity #{arity} not implemented"
   #.........................................................................................................
-  return _map_errors method
+  return map method
 
 #-----------------------------------------------------------------------------------------------------------
 @_get_remit_settings = ( hint, method ) ->
@@ -278,12 +278,12 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
-@$pass = -> _map_errors ( data ) => data
+@$pass = -> map ( data ) => data
 @$drain = ( on_end = null ) -> $pull_drain null, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 @$watch = ( method ) ->
-  return _map_errors ( data ) =>
+  return map ( data ) =>
     method data
     return data
 
