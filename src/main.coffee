@@ -335,11 +335,9 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( settings ) ->
-  throw new Error "µ33128 API changed" if settings?
-  collector = []
-  return @$ { last: symbols.last, }, ( data, send ) =>
-    debug '22929', rpr data
-    if data is symbols.last then send collector
+  collector = settings?.collector ? []
+  return @$ { last: @symbols.last, }, ( data, send ) =>
+    if data is @symbols.last then send collector
     else collector.push data
     return null
 
