@@ -62,7 +62,7 @@ PS                        = require '../..'
       yield ++count
     return null
   #.........................................................................................................
-  await T.perform null, [ 1, 2, 3, 4, ], ->
+  await T.perform null, [1,2,3,4,null,6,7,8,9,10], ->
     return new Promise ( resolve ) ->
       pipeline = []
       pipeline.push PS.new_generator_source g 10
