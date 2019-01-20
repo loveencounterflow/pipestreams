@@ -30,6 +30,8 @@ pull_through              = require 'pull-through'
 #...........................................................................................................
 read                      = ( path ) -> FS.readFileSync path, { encoding: 'utf-8', }
 defer                     = setImmediate
+{ inspect, }              = require 'util'
+xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infinity, maxArrayLength: Infinity, depth: Infinity, }
 
 #-----------------------------------------------------------------------------------------------------------
 @_prune = ->
@@ -287,26 +289,48 @@ defer                     = setImmediate
 #-----------------------------------------------------------------------------------------------------------
 @[ "$surround async" ] = ( T, done ) ->
   [ probe, matcher, error, ] = [null,"[first|1|2|3|4|5|last]",null]
-  await T.perform probe, matcher, error, ->
-    return new Promise ( resolve, reject ) ->
-      R         = null
-      drainer   = -> help 'ok'; resolve R
-      pipeline  = []
-      pipeline.push PS.new_value_source [ 1 .. 5 ]
-      #.........................................................................................................
-      pipeline.push PS.$surround { first: 'first', last: 'last', }
-      pipeline.push $async { first: '[', last: ']', between: '|', }, ( d, send, done ) =>
-        defer ->
-          # debug '22922', jr d
-          send d
-          done()
-      #.........................................................................................................
-      pipeline.push PS.$collect()
-      pipeline.push $ ( d, send ) -> send ( x.toString() for x in d ).join ''
-      pipeline.push PS.$watch ( d ) -> R = d
-      pipeline.push PS.$drain drainer
-      PS.pull pipeline...
-      return null
+  await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+    R         = null
+    drainer   = -> help 'ok'; resolve R
+    pipeline  = []
+    pipeline.push PS.new_value_source [ 1 .. 5 ]
+    #.........................................................................................................
+    pipeline.push PS.$surround { first: 'first', last: 'last', }
+    pipeline.push $async { first: '[', last: ']', between: '|', }, ( d, send, done ) =>
+      defer ->
+        # debug '22922', jr d
+        send d
+        done()
+    #.........................................................................................................
+    pipeline.push PS.$collect()
+    pipeline.push $ ( d, send ) -> send ( x.toString() for x in d ).join ''
+    pipeline.push PS.$watch ( d ) -> R = d
+    pipeline.push PS.$drain drainer
+    PS.pull pipeline...
+    return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "end push source (1)" ] = ( T, done ) ->
+  [ probe, matcher, error, ] = [["what","a","lot","of","little","bottles"],["what","a","lot","of","little","bottles"],null]
+  await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+    R         = []
+    drainer   = -> help 'ok'; resolve R
+    source    = PS.new_push_source()
+    pipeline  = []
+    pipeline.push source
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push PS.$collect { collector: R, }
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push PS.$drain drainer
+    pull pipeline...
+    debug '83933', probe
+    for word in probe
+      source.send word
+    source.send PS.symbols.end
+    return null
   #.........................................................................................................
   done()
   return null
@@ -316,5 +340,6 @@ unless module.parent?
   # include = []
   # @_prune()
   # @_main()
-  test @[ "$surround async" ]
-
+  # test @
+  # test @[ "$surround async" ]
+  test @[ "end push source (1)" ]
