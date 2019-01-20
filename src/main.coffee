@@ -39,10 +39,10 @@ return_id                 = ( x ) -> x
   assign
   jr }                    = CND
 #...........................................................................................................
-symbols =
+@symbols =
   misfit:       Symbol 'misfit'
   last:         Symbol 'last'
-
+  end:          Symbol.for 'pipestreams:end'
 
 #===========================================================================================================
 # ISA METHODS
@@ -69,14 +69,14 @@ symbols =
   new_pushable  = require 'pull-pushable'
   source        = new_pushable P...
   R             = ( P... ) -> source P...
+  PS            = @
   #.........................................................................................................
   send = ( d ) ->
-    if d? then  source.push d
-    else        debug '22022 pipstreams/new_push_source ended'; @end()
+    return end() if d is PS.symbols.end
+    source.push d
     return null
   #.........................................................................................................
   end = ( P... ) ->
-    # source.push null
     source.end P...
     return null
   #.........................................................................................................
