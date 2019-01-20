@@ -170,11 +170,11 @@ return_id                 = ( x ) -> x
 #-----------------------------------------------------------------------------------------------------------
 @_get_remit_settings = ( hint, method ) ->
   defaults  =
-    first:    symbols.misfit
-    last:     symbols.misfit
-    between:  symbols.misfit
-    after:    symbols.misfit
-    before:   symbols.misfit
+    first:    @symbols.misfit
+    last:     @symbols.misfit
+    between:  @symbols.misfit
+    after:    @symbols.misfit
+    before:   @symbols.misfit
   settings  = assign {}, defaults
   switch arity = arguments.length
     when 1
@@ -187,11 +187,11 @@ return_id                 = ( x ) -> x
         settings = assign settings, hint
     else throw new Error "µ19358 expected 1 or 2 arguments, got #{arity}"
   settings._surround = \
-    ( settings.first    isnt symbols.misfit ) or \
-    ( settings.last     isnt symbols.misfit ) or \
-    ( settings.between  isnt symbols.misfit ) or \
-    ( settings.after    isnt symbols.misfit ) or \
-    ( settings.before   isnt symbols.misfit )
+    ( settings.first    isnt @symbols.misfit ) or \
+    ( settings.last     isnt @symbols.misfit ) or \
+    ( settings.between  isnt @symbols.misfit ) or \
+    ( settings.after    isnt @symbols.misfit ) or \
+    ( settings.before   isnt @symbols.misfit )
   return { settings, method, }
 
 #-----------------------------------------------------------------------------------------------------------
@@ -215,11 +215,11 @@ return_id                 = ( x ) -> x
   data_between  = settings.between
   data_after    = settings.after
   data_last     = settings.last
-  send_first    = data_first    isnt symbols.misfit
-  send_before   = data_before   isnt symbols.misfit
-  send_between  = data_between  isnt symbols.misfit
-  send_after    = data_after    isnt symbols.misfit
-  send_last     = data_last     isnt symbols.misfit
+  send_first    = data_first    isnt @symbols.misfit
+  send_before   = data_before   isnt @symbols.misfit
+  send_between  = data_between  isnt @symbols.misfit
+  send_after    = data_after    isnt @symbols.misfit
+  send_last     = data_last     isnt @symbols.misfit
   on_end        = null
   is_first      = true
   PS            = @
@@ -242,9 +242,8 @@ return_id                 = ( x ) -> x
       self = @
       method data_last, send
       self = null
-      ### somewhat hidden in the docs: *must* call `@queue null` to end stream: ###
-      # defer -> @queue null
-      @queue null
+      # defer -> @queue PS.symbols.end
+      @queue PS.symbols.end
       return null
   #.........................................................................................................
   return pull_through on_data, on_end
@@ -269,13 +268,13 @@ return_id                 = ( x ) -> x
   has_ended   = false
   #.........................................................................................................
   pipeline.push @$surround settings if settings._surround
-  pipeline.push @$surround { last: symbols.last, }
+  pipeline.push @$surround { last: @symbols.last, }
   #.........................................................................................................
   pipeline.push $paramap ( d, handler ) =>
     collector   = []
     #.......................................................................................................
     send = ( d ) =>
-      return handler true if d is null
+      return handler true if d is @symbols.end
       collector.unshift d
       return null
     #.......................................................................................................
@@ -285,7 +284,7 @@ return_id                 = ( x ) -> x
       handler true if has_ended and call_count < 1
       return null
     #.......................................................................................................
-    if d is symbols.last
+    if d is @symbols.last
       has_ended = true
       handler true if call_count < 1
     else
