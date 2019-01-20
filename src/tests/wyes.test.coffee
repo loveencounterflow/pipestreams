@@ -146,17 +146,19 @@ new_filtered_bysink = ( name, collector, filter ) ->
         #...................................................................................................
         bystream            = []
         bystream.push bysource
-        bystream.push PS.$watch ( d ) -> whisper '10191-5', 'bysource', jr d
+        bystream.push PS.$watch ( d ) -> whisper '10192-1', 'bysource', jr d
         bystream.push PS.$defer() if defer_bystream
+        bystream.push PS.$watch ( d ) -> whisper '10192-1a', 'bysource', jr d
         bystream = PS.pull bystream...
         #...................................................................................................
         mainstream          = []
         mainstream.push mainsource
+        mainstream.push $ { last: 'last' }, ( d, send ) -> urge '10192-2', 'mainstream', d; send d unless d is 'last'
         mainstream.push PS.$defer() if defer_mainstream
-        mainstream.push PS.$watch ( d ) -> whisper '10191-6', 'mainstream', jr d
+        mainstream.push PS.$watch ( d ) -> whisper '10192-3', 'mainstream', jr d
         mainstream.push PS.$wye bystream
         mainstream.push PS.$watch ( d ) -> R.push d
-        mainstream.push PS.$watch ( d ) -> urge CND.white '10191-7', 'confluence', jr d
+        mainstream.push PS.$watch ( d ) -> urge CND.white '10192-4', 'confluence', jr d
         mainstream.push PS.$drain drainer
         PS.pull mainstream...
         max_idx = ( Math.max mainstream_values.length, bystream_values.length ) - 1
@@ -170,7 +172,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@divert = ( T, done ) ->
+@[ "divert" ] = ( T, done ) ->
   probes_and_matchers = [
     [[10,11,12,13,14,15,16,17,18,19,20],{"odd_numbers":[11,13,15,17,19],"all_numbers":[10,11,12,13,14,15,16,17,18,19,20]},null]
     ]
@@ -205,7 +207,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@bifurcate = ( T, done ) ->
+@[ "bifurcate" ] = ( T, done ) ->
   probes_and_matchers = [
     [[10,11,12,13,14,15,16,17,18,19,20],{"odd_numbers":[11,13,15,17,19],"even_numbers":[10,12,14,16,18,20]},null]
     ]
@@ -249,8 +251,8 @@ new_filtered_bysink = ( name, collector, filter ) ->
   ordering of each stream is preserved, no values get lost, and that relative ordering of values in the
   mainstream and the bystream is arbitrary. ###
   probes_and_matchers = [
-    [[[3,4,5,6,7,8],["just","a","few","words"]],{"bystream":[3,4,5,6,7,8],"mainstream":["just","a","few","words"]},null]
-    [[[3,4],[9,10,11,true]],{"bystream":[3,4],"mainstream":[9,10,11,true]},null]
+    # [[[3,4,5,6,7,8],["just","a","few","words"]],{"bystream":[3,4,5,6,7,8],"mainstream":["just","a","few","words"]},null]
+    # [[[3,4],[9,10,11,true]],{"bystream":[3,4],"mainstream":[9,10,11,true]},null]
     [[[3,4,{"foo":"bar"}],[false,9,10,11,true]],{"bystream":[3,4,{"foo":"bar"}],"mainstream":[false,9,10,11,true]},null]
     ]
   #.........................................................................................................
@@ -261,12 +263,21 @@ new_filtered_bysink = ( name, collector, filter ) ->
       byline    = []
       byline.push PS.new_random_async_value_source 0.1, probe[ 0 ]
       byline.push $ ( d, send ) -> send [ 'bystream', d, ]
-      # byline.push PS.$watch ( d ) -> whisper 'bystream', jr d
+      byline.push $ { first: 'first', last: 'last', }, ( d, send ) ->
+        if d in [ 'first', 'last', ]
+          warn 'bystream', jr d
+        else
+          whisper 'bystream', jr d
       #.....................................................................................................
       mainline = []
       mainline.push PS.new_random_async_value_source probe[ 1 ]
       mainline.push $ ( d, send ) -> send [ 'mainstream', d, ]
       mainline.push PS.$wye PS.pull byline...
+      mainline.push $ { first: 'first', last: 'last', }, ( d, send ) ->
+        if d in [ 'first', 'last', ]
+          warn 'mainstream', jr d
+        else
+          whisper 'mainstream', jr d
       mainline.push PS.$collect()
       mainline.push PS.$watch ( d ) ->
         R       = { bystream: [], mainstream: [], }
@@ -285,13 +296,11 @@ new_filtered_bysink = ( name, collector, filter ) ->
 #-----------------------------------------------------------------------------------------------------------
 @[ "$wye 3" ] = ( T, done ) ->
   probes_and_matchers = [
-    [{"start_value":0.5,"delta":0.01,"min":0.3233333333333333,"max":0.3433333333333333},[0.5,0.25,0.375,0.3125,0.34375,0.328125],null]
+    [{"start_value":0.5,"delta":0.01,},[0.5,0.25,0.375,0.3125,0.34375,0.328125],null]
     ]
-  end_sym = Symbol 'end'
+  end_sym = Symbol.for 'end'
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
-    probe.min = 1 / 3 - probe.delta
-    probe.max = 1 / 3 + probe.delta
     await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
       R                   = []
       drainer             = -> debug '10191-1', "mainstream ended"; resolve R
@@ -302,7 +311,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
       bystream.push bysource
       bystream.push $ { last: end_sym,}, ( d, send ) ->
         if d is end_sym
-          debug '22092', "bystream ended"
+          debug '22092-1', "bystream ended"
         else
           send d
         return null
@@ -314,10 +323,11 @@ new_filtered_bysink = ( name, collector, filter ) ->
       mainstream.push PS.$wye bystream
       mainstream.push PS.$async ( d, send, done ) ->
         send d
-        if probe.min <= d <= probe.max
+        if ( 1 / 3 - probe.delta ) <= d <= ( 1 / 3 + probe.delta )
           defer ->
-            send null
-            bysource.send null
+            # send end_sym
+            mainsource.end()
+            bysource.end()
             done()
         else
           defer ->
@@ -334,15 +344,57 @@ new_filtered_bysink = ( name, collector, filter ) ->
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "$wye 4" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[true,true,[10,11,12,13,14,15],[20,21,22,23,24,25]],[10,11,12,13,14,15,20,21,22,23,24,25],null]
+    [[false,false,[10,11,12,13,14,15],[20,21,22,23,24,25]],[10,11,12,13,14,15,20,21,22,23,24,25],null]
+    [[false,true,[10,11,12,13,14,15],[20,21,22,23,24,25]],[10,11,12,13,14,15,20,21,22,23,24,25],null]
+    # [[true,false,[10,11,12,13,14,15],[20,21,22,23,24,25]],[10,11,12,13,14,15,20,21,22,23,24,25],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    #.......................................................................................................
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      [ use_bystream_vs
+        use_mainstream_vs
+        byline_values
+        mainline_values ] = probe
+      R                   = []
+      #.....................................................................................................
+      byline              = []
+      mainline            = []
+      #.....................................................................................................
+      byline.push ( if use_bystream_vs then PS.new_value_source else PS.new_random_async_value_source ) byline_values
+      byline.push PS.$show title: 'bystream'
+      bystream            = PS.pull byline...
+      #.....................................................................................................
+      mainline.push ( if use_mainstream_vs then PS.new_value_source else PS.new_random_async_value_source ) mainline_values
+      mainline.push PS.$show title: 'mainstream'
+      # mainline.push PS.$defer()
+      mainline.push PS.$wye bystream
+      mainline.push PS.$show title: 'confluence'
+      mainline.push PS.$collect { collector: R, }
+      mainline.push PS.$drain ->
+        help 'ok'
+        resolve R.sort()
+      mainstream          = PS.pull mainline...
+      #.....................................................................................................
+      return null
+  #.........................................................................................................
+  done()
+  return null
+
 
 ############################################################################################################
 unless module.parent?
-  test @
+  # test @
   # test @[ "$merge 1" ]
   # test @[ "$wye 1" ]
   # test @[ "$wye 2" ]
-  # test @[ "$wye 3" ]
-  # test @divert
-  # test @bifurcate
+  # test @[ "$wye 3" ], { timeout: 5000, }
+  # test @[ "divert" ]
+  # test @[ "bifurcate" ]
   # test @[ "wye from asnyc random sources" ]
+  test @[ "$wye 4" ], { timeout: 2000, }
 

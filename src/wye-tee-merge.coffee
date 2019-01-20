@@ -77,22 +77,51 @@ defer                     = setImmediate
   substream_ended   = false
   #.........................................................................................................
   subline.push pair.source
-  subline.push @$ { last: end_sym, }, ( d, send ) ->
+  # subline.push @$ { last: end_sym, }, ( d, send ) ->
+  #   send d
+  subline.push @$defer()
+  subline.push @$async { last: end_sym, }, ( d, send, done ) ->
+    debug CND.yellow '11190-1', d
     if d is end_sym
       substream_ended = true
-      pushable.end() if bystream_ended
+      debug CND.white '22209-1 pipestreams.$wye', d, { bystream_ended, substream_ended, }
+      if bystream_ended
+        # debug '66373-1', "ending pushable"
+        # pushable.end()
+        # defer -> done()
+        defer ->
+          debug '66373-1', "ending pushable"
+          pushable.end()
+          defer -> done()
     else
       pushable.send d
+      done()
+    return null
+  subline.push @$defer()
   subline.push @$drain()
   #.........................................................................................................
   byline.push bystream
-  byline.push @$ { last: end_sym, }, ( d, send ) ->
+  byline.push @$show title: '33839'
+  byline.push @$defer()
+  byline.push @$async { last: end_sym, }, ( d, send, done ) ->
+    debug CND.yellow '11190-2', d
     if d is end_sym
       bystream_ended = true
-      pushable.end() if substream_ended
+      debug CND.white '22209-2 pipestreams.$wye', d, { bystream_ended, substream_ended, }
+      if substream_ended
+        # debug '66373-2', "ending pushable"
+        # pushable.end()
+        # defer -> done()
+        defer ->
+          debug '66373-2', "ending pushable"
+          pushable.end()
+          defer -> done()
     else
       send d
+      done()
+    return null
   #.........................................................................................................
+  byline.push @$defer()
   @pull subline...
   confluence = @$merge pushable, @pull byline...
   return { sink: pair.sink, source: confluence, }

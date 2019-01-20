@@ -326,10 +326,50 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
     pipeline.push PS.$watch ( d ) -> info xrpr d
     pipeline.push PS.$drain drainer
     pull pipeline...
-    debug '83933', probe
     for word in probe
       source.send word
     source.send PS.symbols.end
+    return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "end push source (2)" ] = ( T, done ) ->
+  [ probe, matcher, error, ] = [["what","a","lot","of","little","bottles","stop"],["what","a","lot","of","little","bottles"],null]
+  await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+    R         = []
+    drainer   = -> help 'ok'; resolve R
+    source    = PS.new_push_source()
+    pipeline  = []
+    pipeline.push source
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push $ ( d, send ) -> send if d is 'stop' then PS.symbols.end else d
+    pipeline.push PS.$collect { collector: R, }
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push PS.$drain drainer
+    pull pipeline...
+    for word in probe
+      source.send word
+    return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "end random async source" ] = ( T, done ) ->
+  [ probe, matcher, error, ] = [["what","a","lot","of","little","bottles"],["what","a","lot","of","little","bottles"],null]
+  await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+    R         = []
+    drainer   = -> help 'ok'; resolve R
+    source    = PS.new_random_async_value_source probe
+    pipeline  = []
+    pipeline.push source
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push PS.$collect { collector: R, }
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push PS.$drain drainer
+    pull pipeline...
     return null
   #.........................................................................................................
   done()
@@ -342,4 +382,6 @@ unless module.parent?
   # @_main()
   # test @
   # test @[ "$surround async" ]
-  test @[ "end push source (1)" ]
+  # test @[ "end push source (1)" ]
+  # test @[ "end push source (2)" ]
+  test @[ "end random async source" ]
