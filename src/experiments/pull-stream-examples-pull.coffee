@@ -272,98 +272,27 @@ and it will stop after n items! ###
 # pipeline.push sink
 # pull pipeline...
 
-#-----------------------------------------------------------------------------------------------------------
-@[ "list with nulls" ] = ( T, done ) ->
-  probes_and_matchers = [
-    [[ 5, 15, 20, null, 25, 30, ], [25,225,400,null,625,900]]
-    ]
-  #.........................................................................................................
-  for [ probe, matcher, error, ] in probes_and_matchers
-    await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
-      # source    = source_from_values [ 5, 15, 20, 25, 30, ]
-      repeated  = 0
-      source    = source_from_values probe
-      # through = require 'pull-stream/throughs/through'
-      pipeline  = []
-      pipeline.push source
-      pipeline.push $square()
-      pipeline.push PS.$show { title: 'B1', }
-      pipeline.push PS.$collect()
-      # pipeline.push $collect_A()
-      # pipeline.push through -> debug ( key for key of @ )
-      # pipeline.push ( require 'pull-stream' ).filter ( d ) -> d isnt Symbol.for 'pipestreams:discard'
-      pipeline.push PS.$show { title: 'B2', }
-      pipeline.push map ( d ) ->
-        info '--->', d
-        debug repeated
-        throw new Error "called more than once" if ++repeated isnt 1
-        resolve d
-        return d
-      pipeline.push ( require 'pull-stream/sinks/drain' )()
-      # pipeline.push sink
-      pull pipeline...
-  #.........................................................................................................
-  done()
-  return null
 
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "demo through with null" ] = ( T, done ) ->
   # through = require 'pull-through'
-  through = require '../../../pull-through-with-end-symbol'
   probes_and_matchers = [
-    [[true,[ 5, 15, 20, undefined, 25, 30, ]], [ 10, 30, 40, undefined, 50, 60 ]]
-    [[false,[ 5, 15, 20, undefined, 25, 30, ]], [ 10, 30, 40, undefined, 50, 60 ]]
-    [[true,[ 5, 15, 20, null, 25, 30, ]], [ 10, 30, 40, null, 50, 60 ]]
-    [[false,[ 5, 15, 20, null, 25, 30, ]], [ 10, 30, 40, null, 50, 60 ]]
+    [[ 5, 15, 20, undefined, 25, 30, ], [ 10, 30, 40, undefined, 50, 60 ]]
+    [[ 5, 15, 20, null, 25, 30, ], [ 10, 30, 40, null, 50, 60 ]]
     ]
-  #.........................................................................................................
-  remit = ( use_on_end, method ) ->
-    end_sym = Symbol.for 'pipestreams:end'
-    self    = null
-    count   = 0
-    #.....................................................................................................
-    send    = ( d ) ->
-      # debug '20092-1', 'send', rpr d
-      # self.queue if d is null then end_sym else d
-      self.queue d
-    #.....................................................................................................
-    on_data = ( d ) ->
-      # debug '20092-2', 'on_data', rpr d
-      self = @
-      method d, send
-    #.....................................................................................................
-    on_end = ->
-      process.exit 1 if count++ > 10
-      self = @
-      debug '11109', 'on_end'
-      @queue end_sym
-    #.....................................................................................................
-    return through on_data, on_end if use_on_end
-    return through on_data
-    # return through on_data, on_end
-    # return through on_data
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
-      [ use_on_end, values, ] = probe
       #.....................................................................................................
-      on_data = ( d ) ->
-        @queue if d? then d * 2 else d
-      #.....................................................................................................
-      on_end = ->
-        @queue null
-      #.....................................................................................................
-      source    = source_from_values values
+      source    = source_from_values probe
       collector = []
       pipeline  = []
       pipeline.push source
       pipeline.push map ( d ) -> info '--->', d; return d
-      pipeline.push remit use_on_end, ( d, send ) -> send if d? then d * 2 else d
-      pipeline.push map ( d ) -> info '--->', d; return d
-      # pipeline.push map ( d ) -> if d? then d * 2 else d
-      # pipeline.push through on_data, on_end
-      pipeline.push map ( d ) -> collector.push d; return d
+      pipeline.push PS.$ ( d, send ) -> send if d? then d * 2 else d
+      # pipeline.push map ( d ) -> collector.push d; return d
+      pipeline.push PS.$collect { collector, }
       pipeline.push PS.$drain ->
         help collector
         resolve collector
@@ -377,8 +306,7 @@ and it will stop after n items! ###
 ############################################################################################################
 unless module.parent?
   null
-  # test @
-  test @[ "demo through with null" ]
+  test @
 
 
 ###
