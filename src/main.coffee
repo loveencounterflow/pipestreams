@@ -129,13 +129,14 @@ return_id                 = ( x ) -> x
   unless ( CND.isa_number last_idx )
     throw new Error "µ89231 expected a list-like object, got a #{CND.type_of values}"
   #.........................................................................................................
-  tick = ->
+  tick = =>
     if idx <= last_idx
       R.send values[ idx ]
       idx += +1
       after new_timeout(), tick
     else
-      R.send null
+      # R.send @symbols.end
+      R.end()
     return null
   #.........................................................................................................
   after new_timeout(), tick
