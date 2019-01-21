@@ -388,7 +388,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
 
 ############################################################################################################
 unless module.parent?
-  # test @
+  test @, { timeout: 5000, }
   # test @[ "$merge 1" ]
   # test @[ "$wye 1" ]
   # test @[ "$wye 2" ]
@@ -396,5 +396,5 @@ unless module.parent?
   # test @[ "divert" ]
   # test @[ "bifurcate" ]
   # test @[ "wye from asnyc random sources" ]
-  test @[ "$wye 4" ], { timeout: 2000, }
+  # test @[ "$wye 4" ], { timeout: 2000, }
 
