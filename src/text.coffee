@@ -23,7 +23,7 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
   skip_last = yes
   R.push $pull_utf8_decoder()
   R.push $pull_split matcher, mapper, reverse, skip_last
-  return pull R...
+  return @pull R...
 
 #-----------------------------------------------------------------------------------------------------------
 @$join = ( joiner = null ) ->
@@ -56,13 +56,13 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
 
 #-----------------------------------------------------------------------------------------------------------
 @$as_line = ->
-  return @_map_errors ( line ) =>
+  return @$map ( line ) =>
     "µ839833 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
     line + '\n'
 
 #-----------------------------------------------------------------------------------------------------------
 @$trim = ->
-  return @_map_errors ( line ) =>
+  return @$map ( line ) =>
     "µ839833 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
     line.trim()
 
@@ -75,7 +75,7 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
 #-----------------------------------------------------------------------------------------------------------
 @$as_text = ( settings ) ->
   serialize = settings?[ 'serialize' ] ? JSON.stringify
-  return @_map_errors ( data ) => serialize data
+  return @$map ( data ) => serialize data
 
 #-----------------------------------------------------------------------------------------------------------
 @$desaturate = ->
