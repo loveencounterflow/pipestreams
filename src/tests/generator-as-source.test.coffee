@@ -77,6 +77,31 @@ PS                        = require '../..'
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "generator as source 3" ] = ( T, done ) ->
+  count = 0
+  #.........................................................................................................
+  g = ->
+    loop
+      yield ++count
+    return null
+  #.........................................................................................................
+  await T.perform null, [1,2,3,4,], ->
+    return new Promise ( resolve ) ->
+      pipeline = []
+      pipeline.push PS.new_generator_source g()
+      pipeline.push PS.$defer()
+      pipeline.push $ ( d, send ) -> send if d is 5 then PS.symbols.end else d
+      pipeline.push PS.$show()
+      pipeline.push PS.$collect()
+      pipeline.push PS.$watch ( d ) ->
+        debug '22920', d
+        resolve d
+      pipeline.push PS.$drain()
+      PS.pull pipeline...
+  done()
+  return null
+
 
 ############################################################################################################
 unless module.parent?

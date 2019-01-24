@@ -43,6 +43,7 @@ return_id                 = ( x ) -> x
   misfit:       Symbol 'misfit'
   last:         Symbol 'last'
   end:          Symbol.for 'pipestreams:end'
+  discard:      Symbol.for 'pipestreams:discard'
 
 #===========================================================================================================
 # ISA METHODS
@@ -147,8 +148,39 @@ return_id                 = ( x ) -> x
   return ( end, handler ) ->
     return handler end if end
     R = generator.next()
-    return handler true if R.done
-    handler null, R.value
+    defer ->
+      return handler true if R.done
+      handler null, R.value
+
+#-----------------------------------------------------------------------------------------------------------
+@new_refillable_source = ( values, settings ) ->
+  ### A refillable source expects a list of `values` (or a listlike object with
+  a `shift()` method); when a read occurs, it will empty `values` one element at
+  a time, always shifting the leftmost element (with index zero) from `values`.
+  Transforms down the line may choose to `values.push()` new values into the
+  list, which will in time be sent down again. When a read occurs and `values`
+  happens to be empty, a special value (the `trailer`, by default
+  `PS.symbols.discard`) will be sent down the line (only to be filtered out
+  immediately) up to `repeat` times (by default one time) in a row to avoid
+  depleting the pipeline. ###
+  settings      = assign { repeat: 1, trailer: @symbols.discard, }, settings
+  trailer_count = 0
+  filter        = @$filter ( d ) => d isnt @symbols.discard
+  read          = ( abort, handler ) =>
+    return handler abort if abort
+    if values.length is 0
+      if trailer_count < settings.repeat
+        trailer_count  += +1
+        value           = settings.trailer
+      else
+        return handler true
+    else
+      trailer_count = 0
+      value         = values.shift()
+    ### Must defer callback so the the pipeline gets a chance to refill: ###
+    defer -> handler null, value
+    return null
+  return @pull read, filter
 
 #-----------------------------------------------------------------------------------------------------------
 @$filter = ( method ) ->
