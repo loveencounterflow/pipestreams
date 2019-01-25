@@ -56,6 +56,7 @@ get_source_ref = ( delta, prefix, color ) ->
 get_logger = ( letter, color ) ->
   transform_nr = 0
   return ( transform ) ->
+    debug '34984', transform
     transform_nr   += +1
     prefix          = "#{CND[ color ] CND.reverse '  '} #{CND[ color ] letter + transform_nr}"
     source_ref      = get_source_ref 1, prefix, color
@@ -162,40 +163,42 @@ get_logger = ( letter, color ) ->
 @[ "circular pipeline 2" ] = ( T, done ) ->
   # through = require 'pull-through'
   probes_and_matchers = [
-    # [[ 5, 15, 20, undefined, 25, 30, ], [ 10, 30, 40, undefined, 50, 60 ]]
-    # [[1,2,3,4,5],[2,6,4,6,null,null,12,8,10],null]
-    [[3,4],[3,4,10,2,5,1,16,8,4,2,1],null]
+    [[true,3,4],[30,32,34,10,12,14,20,22,24,94,100,34,40,64,70],null]
+    [[false,3,4],[10,30,12,32,14,34,20,22,24,34,94,40,100,64,70],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
+      upperlog                  = get_logger 'U', 'gold'
+      lowerlog                  = get_logger 'L', 'red'
       #.....................................................................................................
-      get_source = ->
-        loop
-          yield Symbol.for 'tick'
-        return null
-      #-----------------------------------------------------------------------------------------------------
-      bylog                   = get_logger 'b', 'red'
-      mainlog                 = get_logger 'm', 'gold'
+      [ use_defer, values..., ] = probe
+      collector                 = []
+      upperline                 = []
+      lowerline                 = []
+      refillable                = [ 20 .. 24 ]
       #.....................................................................................................
-      use_defer               = true
-      collector               = []
-      mainline                = []
-      mainline.push PS.new_generator_source get_source()
-      mainline.push PS.$defer() if use_defer
-      mainline.push PS.$watch ( d ) -> urge xrpr d
-      # mainline.push $ ( d, send ) ->
-      #   if d > 1
-      #     if d %% 2 is 0 then buffer.push d / 2
-      #     else                buffer.push d * 3 + 1
-      #   send d
-      #   # send PS.symbols.end if d is 1
-      mainline.push PS.$collect { collector, }
-      # mainline.push mainlog PS.$drain ->
-      mainline.push PS.$drain ->
+      source_1                  = PS.new_value_source [ 10 .. 14 ]
+      source_2                  = PS.new_refillable_source refillable, { repeat: 1, show: true, }
+      source_3                  = PS.new_value_source [ 30 .. 34 ]
+      #.....................................................................................................
+      upperline.push PS.$merge source_1, source_2
+      upperline.push upperlog PS.$defer() if use_defer
+      upperline.push PS.$watch ( d ) -> echo 'U', xrpr d
+      upperstream = PS.pull upperline...
+      #.....................................................................................................
+      lowerline.push PS.$merge upperstream, source_3
+      lowerline.push PS.$watch ( d ) -> echo 'L', xrpr d
+      lowerline.push lowerlog $ ( d, send ) ->
+        if d %% 2 is 0
+          send d
+        else
+          refillable.push d * 3 + 1
+      lowerline.push PS.$collect { collector, }
+      lowerline.push PS.$drain ->
         help collector
         resolve collector
-      PS.pull mainline...
+      PS.pull lowerline...
   #.........................................................................................................
   done()
   return null
