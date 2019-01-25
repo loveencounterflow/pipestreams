@@ -163,14 +163,17 @@ return_id                 = ( x ) -> x
   `PS.symbols.discard`) will be sent down the line (only to be filtered out
   immediately) up to `repeat` times (by default one time) in a row to avoid
   depleting the pipeline. ###
-  settings      = assign { repeat: 1, trailer: @symbols.discard, }, settings
+  settings      = assign { repeat: 1, trailer: @symbols.discard, show: false, }, settings
   trailer_count = 0
+  #.........................................................................................................
   filter        = @$filter ( d ) => d isnt @symbols.discard
+  #.........................................................................................................
   read          = ( abort, handler ) =>
     return handler abort if abort
     if values.length is 0
+      trailer_count  += +1
+      info '23983', "refillable source depeleted: #{trailer_count} / #{settings.repeat}" if settings.show
       if trailer_count < settings.repeat
-        trailer_count  += +1
         value           = settings.trailer
       else
         return handler true
@@ -180,6 +183,7 @@ return_id                 = ( x ) -> x
     ### Must defer callback so the the pipeline gets a chance to refill: ###
     defer -> handler null, value
     return null
+  #.........................................................................................................
   return @pull read, filter
 
 #-----------------------------------------------------------------------------------------------------------
