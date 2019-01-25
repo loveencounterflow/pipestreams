@@ -29,53 +29,7 @@ test                      = require 'guy-test'
 assign                    = Object.assign
 { inspect, }              = require 'util'
 xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infinity, maxArrayLength: Infinity, depth: Infinity, }
-#...........................................................................................................
-STACKTRACE                = require 'stack-trace' ### https://github.com/felixge/node-stack-trace ###
-get_source                = require 'get-source' ### https://github.com/xpl/get-source ###
 
-
-#-----------------------------------------------------------------------------------------------------------
-get_source_ref = ( delta, prefix, color ) ->
-  trace           = STACKTRACE.get()[ delta + 1 ]
-  js_filename     = trace.getFileName()
-  js_line_nr      = trace.getLineNumber()
-  js_column_nr    = trace.getColumnNumber()
-  target          = ( get_source js_filename ).resolve { line: js_line_nr, column: js_column_nr, }
-  target_column   = target.column
-  target_line     = target.sourceLine[ target_column .. ]
-  target_line     = target_line.replace /^\s*(.*?)\s*$/g, '$1'
-  target_path     = target.sourceFile.path
-  display_path    = target_path.replace /\.[^.]+$/, ''
-  display_path    = '...' + display_path[ display_path.length - 10 .. ]
-  target_line_nr  = target.line
-  ### TAINT use tabular as in old pipedreams ###
-  R               = "#{CND.gold prefix} #{CND.grey display_path} #{CND.white target_line_nr} #{CND[ color ] target_line}"
-  return R.padEnd 150, ' '
-
-#-----------------------------------------------------------------------------------------------------------
-get_logger = ( letter, color ) ->
-  transform_nr = 0
-  return ( transform ) ->
-    debug '34984', transform
-    transform_nr   += +1
-    prefix          = "#{CND[ color ] CND.reverse '  '} #{CND[ color ] letter + transform_nr}"
-    source_ref      = get_source_ref 1, prefix, color
-    pipeline        = []
-    leader          = '  '.repeat transform_nr
-    echo source_ref
-    if transform.source? and transform.sink?
-      throw new Error "unable to use logging with duplex stream"
-    switch transform.length
-      when 0
-        pipeline.push transform
-        pipeline.push PS.$watch ( d ) -> echo "#{prefix}#{leader}#{xrpr d}"
-      when 1
-        if transform_nr is 1
-          pipeline.push PS.$watch ( d ) -> echo '-'.repeat 108
-        pipeline.push PS.$watch ( d ) -> echo "#{prefix}#{leader}#{CND[ color ] CND.reverse '  '} #{xrpr d}"
-        pipeline.push transform
-        pipeline.push PS.$watch ( d ) -> echo "#{prefix}#{leader}#{CND[ color ] CND.reverse '  '} #{xrpr d}"
-    return PS.pull pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "demo through with null" ] = ( T, done ) ->
@@ -88,8 +42,8 @@ get_logger = ( letter, color ) ->
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
       is_odd    = ( d ) -> ( d %% 2 ) isnt 0
-      bylog     = get_logger 'b', 'red'
-      mainlog   = get_logger 'm', 'gold'
+      bylog     = PS.get_logger 'b', 'red'
+      mainlog   = PS.get_logger 'm', 'gold'
       #.....................................................................................................
       # source    = PS.new_value_source probe
       source    = PS.new_random_async_value_source probe
@@ -132,8 +86,8 @@ get_logger = ( letter, color ) ->
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
       #-----------------------------------------------------------------------------------------------------
-      bylog                   = get_logger 'b', 'red'
-      mainlog                 = get_logger 'm', 'gold'
+      bylog                   = PS.get_logger 'b', 'red'
+      mainlog                 = PS.get_logger 'm', 'gold'
       #.....................................................................................................
       use_defer               = true
       buffer                  = [ probe..., ]
@@ -169,8 +123,8 @@ get_logger = ( letter, color ) ->
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
-      upperlog                  = get_logger 'U', 'gold'
-      lowerlog                  = get_logger 'L', 'red'
+      upperlog                  = PS.get_logger 'U', 'gold'
+      lowerlog                  = PS.get_logger 'L', 'red'
       #.....................................................................................................
       [ use_defer, values..., ] = probe
       collector                 = []
@@ -212,8 +166,8 @@ get_logger = ( letter, color ) ->
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
-      bylog         = get_logger 'b', 'red'
-      mainlog       = get_logger 'm', 'gold'
+      bylog         = PS.get_logger 'b', 'red'
+      mainlog       = PS.get_logger 'm', 'gold'
       mainsource    = PS.new_value_source probe
       collector     = []
       mainline      = []
@@ -269,8 +223,8 @@ pull-stream-to-stream
   NET           = require 'net'
   toPull        = require 'stream-to-pull-stream'
   pull          = require 'pull-stream'
-  bylog         = get_logger 'b', 'red'
-  mainlog       = get_logger 'm', 'gold'
+  bylog         = PS.get_logger 'b', 'red'
+  mainlog       = PS.get_logger 'm', 'gold'
   #.........................................................................................................
   server_as_duplex_stream = ( nodejs_stream ) ->
     ### convert into a duplex pull-stream ###
@@ -310,8 +264,8 @@ pull-stream-to-stream
   NET           = require 'net'
   toPull        = require 'stream-to-pull-stream'
   pull          = require 'pull-stream'
-  bylog         = get_logger 'b', 'red'
-  mainlog       = get_logger 'm', 'gold'
+  bylog         = PS.get_logger 'b', 'red'
+  mainlog       = PS.get_logger 'm', 'gold'
   #.........................................................................................................
   server_as_duplex_stream = ( nodejs_stream ) ->
     ### convert into a duplex pull-stream ###

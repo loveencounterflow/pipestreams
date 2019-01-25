@@ -57,7 +57,7 @@ get_source                = require 'get-source' ### https://github.com/xpl/get-
     debug '34984', transform
     transform_nr   += +1
     prefix          = "#{CND[ color ] CND.reverse '  '} #{CND[ color ] letter + transform_nr}"
-    source_ref      = get_source_ref 1, prefix, color
+    source_ref      = @_get_source_ref 1, prefix, color
     pipeline        = []
     leader          = '  '.repeat transform_nr
     echo source_ref
