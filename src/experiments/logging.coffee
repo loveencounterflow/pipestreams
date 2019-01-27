@@ -33,7 +33,6 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "demo through with null" ] = ( T, done ) ->
-  # through = require 'pull-through'
   probes_and_matchers = [
     # [[ 5, 15, 20, undefined, 25, 30, ], [ 10, 30, 40, undefined, 50, 60 ]]
     [[1,2,3,null,4,5],[2,6,4,6,null,null,12,8,10],null]
