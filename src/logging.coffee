@@ -6,7 +6,7 @@
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'PIPESTREAMS/EXPERIMENTS/PULL-STREAM-EXAMPLES-PULL'
+badge                     = 'PIPESTREAMS/LOGGING'
 log                       = CND.get_logger 'plain',     badge
 info                      = CND.get_logger 'info',      badge
 whisper                   = CND.get_logger 'whisper',   badge
@@ -54,7 +54,6 @@ get_source                = require 'get-source' ### https://github.com/xpl/get-
 @get_logger = ( letter, color ) ->
   transform_nr = 0
   return ( transform ) =>
-    debug '34984', transform
     transform_nr   += +1
     prefix          = "#{CND[ color ] CND.reverse '  '} #{CND[ color ] letter + transform_nr}"
     source_ref      = @_get_source_ref 1, prefix, color
