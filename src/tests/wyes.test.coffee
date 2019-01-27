@@ -37,7 +37,7 @@ defer                     = setImmediate
 
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "$merge 1" ] = ( T, done ) ->
+@[ "new_merged_source 1" ] = ( T, done ) ->
   probes_and_matchers = [
     [[["a","b","c"],[1,2,3,4,5,6]],["a",1,"b",2,"c",3,4,5,6],null]
     ]
@@ -58,7 +58,7 @@ defer                     = setImmediate
       pipeline_2.push PS.$watch ( d ) -> whisper '10191-3', d
       #...................................................................................................
       pipeline_3          = []
-      pipeline_3.push PS.$merge ( PS.pull pipeline_1... ), ( PS.pull pipeline_2... )
+      pipeline_3.push PS.new_merged_source ( PS.pull pipeline_1... ), ( PS.pull pipeline_2... )
       pipeline_3.push PS.$watch ( d ) -> R.push d
       pipeline_3.push PS.$watch ( d ) -> urge '10191-4', d
       pipeline_3.push PS.$drain drainer
@@ -389,7 +389,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
 ############################################################################################################
 unless module.parent?
   test @, { timeout: 5000, }
-  # test @[ "$merge 1" ]
+  # test @[ "new_merged_source 1" ]
   # test @[ "$wye 1" ]
   # test @[ "$wye 2" ]
   # test @[ "$wye 3" ], { timeout: 5000, }

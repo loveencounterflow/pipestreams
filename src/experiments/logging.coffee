@@ -136,12 +136,12 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
       source_2                  = PS.new_refillable_source refillable, { repeat: 1, show: true, }
       source_3                  = PS.new_value_source [ 30 .. 34 ]
       #.....................................................................................................
-      upperline.push PS.$merge source_1, source_2
+      upperline.push PS.new_merged_source source_1, source_2
       upperline.push upperlog PS.$defer() if use_defer
       upperline.push PS.$watch ( d ) -> echo 'U', xrpr d
       upperstream = PS.pull upperline...
       #.....................................................................................................
-      lowerline.push PS.$merge upperstream, source_3
+      lowerline.push PS.new_merged_source upperstream, source_3
       lowerline.push PS.$watch ( d ) -> echo 'L', xrpr d
       lowerline.push lowerlog $ ( d, send ) ->
         if d %% 2 is 0
