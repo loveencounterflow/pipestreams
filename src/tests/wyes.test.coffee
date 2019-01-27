@@ -426,9 +426,77 @@ new_filtered_bysink = ( name, collector, filter ) ->
   return null
 
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "circular stream with wye and refillable" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[true,true,true,[1,]],[4],null]
+    [[true,true,true,[2]],[2],null]
+    [[true,true,true,[3]],[10],null]
+    [[true,true,true,[1,2,3]],[2,4,10],null]
+    [[true,true,true,[10,11,12,13,14,15]],[10,12,14,34,40,46],null]
+    [[true,false,false,[1,]],[4],null]
+    [[true,false,false,[2]],[2],null]
+    [[true,false,false,[3]],[10],null]
+    [[true,false,false,[1,2,3]],[2,4,10],null]
+    [[true,false,false,[10,11,12,13,14,15]],[10,12,14,34,40,46],null]
+    [[false,true,false,[1]],[4],null]
+    [[false,true,false,[2]],[2],null]
+    [[false,true,false,[3]],[10],null]
+    [[false,true,false,[1,2,3]],[2,4,10],null]
+    [[false,true,false,[10,11,12,13,14,15]],[10,12,14,34,40,46],null]
+    [[false,false,false,[1]],[4],null]
+    [[false,false,false,[2]],[2],null]
+    [[false,false,false,[3]],[10],null]
+    [[false,false,false,[1,2,3]],[2,4,10],null]
+    [[false,false,false,[10,11,12,13,14,15]],[10,12,14,34,40,46],null]
+    [[false,false,true,[1]],[4],null]
+    [[false,false,true,[2]],[2],null]
+    [[false,false,true,[3]],[10],null]
+    [[false,false,true,[1,2,3]],[2,4,10],null]
+    [[false,false,true,[10,11,12,13,14,15]],[10,12,14,34,40,46],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    #.......................................................................................................
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      [ use_defer_1
+        use_defer_2
+        use_defer_3
+        values ]        = probe
+      collector         = []
+      mainline          = []
+      byline            = []
+      refillable        = []
+      refillable_source = PS.new_refillable_source refillable, { repeat: 5, show: false, }
+      #.........................................................................................................
+      # pipe the second duplex stream back to itself.
+      byline.push refillable_source
+      # byline.push client
+      byline.push PS.$defer() if use_defer_3
+      byline.push $ ( d, send ) -> send d * 3 + 1
+      bystream = PS.pull byline...
+      #.........................................................................................................
+      mainline.push PS.new_value_source values
+      mainline.push PS.$defer() if use_defer_1
+      mainline.push PS.$wye bystream, defer: true
+      mainline.push PS.$defer() if use_defer_2
+      mainline.push $ ( d, send ) ->
+        if d %% 2 isnt 0 then refillable.push d
+        else send d
+      mainline.push PS.$collect { collector, }
+      # mainline.push client
+      mainline.push PS.$drain =>
+        # echo xrpr collector
+        resolve collector
+      PS.pull mainline...
+  #.........................................................................................................
+  done()
+  return null
+
+
 ############################################################################################################
 unless module.parent?
-  test @, { timeout: 5000, }
+  # test @, { timeout: 5000, }
   # test @[ "wye with duplex pair"            ]
   # test @[ "new_merged_source 1"             ]
   # test @[ "$wye 1"                          ]
@@ -438,3 +506,4 @@ unless module.parent?
   # test @[ "wye from asnyc random sources"   ]
   # test @[ "$wye 3"                          ]
   # test @[ "$wye 4"                          ]
+  test @[ "circular stream with wye and refillable" ]
