@@ -27,6 +27,8 @@ PS                        = require '../..'
 { jr
   is_empty }              = CND
 defer                     = setImmediate
+{ inspect, }              = require 'util'
+xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infinity, maxArrayLength: Infinity, depth: Infinity, }
 
 # https://pull-stream.github.io/#pull-through
 
@@ -35,32 +37,32 @@ defer                     = setImmediate
 # https://github.com/scrapjs/pull-imux
 # https://github.com/dominictarr/pull-flow (https://github.com/pull-stream/pull-stream/issues/4)
 
+#-----------------------------------------------------------------------------------------------------------
+provide_wye = ->
+  @$wye = ( stream, use_defer ) ->
+    new_duplex_pair     = require 'pull-pair/duplex'
+    [ client, server, ] = new_duplex_pair()
+    serverline          = []
+    serverline.push @new_merged_source server, stream
+    serverline.push @$defer() if use_defer
+    # serverline.push @$watch ( d ) -> urge d
+    serverline.push server
+    @pull serverline...
+    return client
+provide_wye.apply PS
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "wye with duplex pair" ] = ( T, done ) ->
-  new_duplex_pair     = require 'pull-pair/duplex'
   probes_and_matchers = [
-    [[false,false,false,[11,12,13],[21,22,23,24,25]],[22,42,24,44,26,46,48,50],null]
-    [[false,false,true,[11,12,13],[21,22,23,24,25]],[22,42,24,44,26,46,48,50],null]
-    [[false,true,false,[11,12,13],[21,22,23,24,25]],[22,42,24,44,26,46,48,50],null]
-    [[false,true,true,[11,12,13],[21,22,23,24,25]],[22,42,24,44,26,46,48,50],null]
-    [[true,false,false,[11,12,13],[21,22,23,24,25]],[42,44,46,48,50,22,24,26],null]
-    [[true,false,true,[11,12,13],[21,22,23,24,25]],[42,44,46,48,50,22,24,26],null]
-    [[true,true,false,[11,12,13],[21,22,23,24,25]],[42,44,46,48,50,22,24,26],null]
-    [[true,true,true,[11,12,13],[21,22,23,24,25]],[42,44,46,48,50,22,24,26],null]
+    [[false,false,false,[11,12,13],[21,22,23,24,25]],[11,21,12,22,13,23,24,25],null]
+    [[false,false,true, [11,12,13],[21,22,23,24,25]],[11,21,12,22,13,23,24,25],null]
+    [[false,true, false,[11,12,13],[21,22,23,24,25]],[11,21,12,22,13,23,24,25],null]
+    [[false,true, true, [11,12,13],[21,22,23,24,25]],[11,21,12,22,13,23,24,25],null]
+    [[true, false,false,[11,12,13],[21,22,23,24,25]],[21,22,23,24,25,11,12,13],null]
+    [[true, false,true, [11,12,13],[21,22,23,24,25]],[21,22,23,24,25,11,12,13],null]
+    [[true, true, false,[11,12,13],[21,22,23,24,25]],[21,22,23,24,25,11,12,13],null]
+    [[true, true, true, [11,12,13],[21,22,23,24,25]],[21,22,23,24,25,11,12,13],null]
     ]
-  #.........................................................................................................
-  $wye = ( stream, use_defer ) ->
-    $log                = PS.get_logger 'b', 'red'
-    [ client, server, ] = new_duplex_pair()
-    serverline          = []
-    serverline.push PS.new_merged_source server, stream
-    serverline.push PS.$defer() if use_defer
-    # serverline.push PS.$watch ( d ) -> urge d
-    serverline.push $ ( d, send ) -> send d * 2
-    serverline.push server
-    PS.pull serverline...
-    return client
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
@@ -75,9 +77,9 @@ defer                     = setImmediate
       collector           = []
       clientline          = []
       clientline.push source_a
-      clientline.push PS.$defer() if use_defer_1
-      clientline.push $wye source_b, use_defer_3
-      clientline.push PS.$defer() if use_defer_2
+      clientline.push PS.$defer() if    use_defer_1
+      clientline.push PS.$wye source_b, use_defer_3
+      clientline.push PS.$defer() if    use_defer_2
       clientline.push PS.$collect { collector, }
       # clientline.push PS.$show()
       clientline.push PS.$drain -> resolve collector
@@ -85,7 +87,6 @@ defer                     = setImmediate
   #.........................................................................................................
   done()
   return null
-
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "new_merged_source 1" ] = ( T, done ) ->
@@ -128,28 +129,29 @@ new_filtered_bysink = ( name, collector, filter ) ->
   R = []
   R.push PS.$filter filter
   R.push PS.$watch ( d ) -> collector.push d
-  R.push PS.$watch ( d ) -> whisper '10191', name, jr d
+  # R.push PS.$watch ( d ) -> whisper '10191', '------------>', name, xrpr d
   R.push PS.$drain()
   return PS.pull R...
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "$wye 1" ] = ( T, done ) ->
   probes_and_matchers = [
-    [[["a","b","c"],[1,2,3,4,5,6]],[[1,2,3,4,5,6],["a","b","c"]],null]
+    [[["a","b","c"],[1,2,3,4,5,6]],[[1,2,3,4,5,6],["a","b","c"],[]],null]
+    [[["a",null,"b","c",true],[null,1,2,3,4,5,6,null,undefined,Infinity]],[ [ 1, 2, 3, 4, 5, 6 ], [ 'a', 'b', 'c' ], [ null, null, true, null, undefined, Infinity ] ],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> new Promise ( resolve, reject ) ->
       numbers             = []
       texts               = []
-      R                   = [ numbers, texts, ]
-      drainer             = -> resolve R
+      others              = []
+      R                   = [ numbers, texts, others, ]
       source_1            = PS.new_push_source()
       source_2            = PS.new_push_source()
       #...................................................................................................
       bysource            = []
       bysource.push source_2
-      bysource.push PS.$watch ( d ) -> whisper '10191-5', 'bysource', jr d
+      # bysource.push PS.$watch ( d ) -> whisper '10191-5', 'bysource', jr d
       # bysource.push PS.$defer()
       bysource            = PS.pull bysource...
       #...................................................................................................
@@ -160,14 +162,16 @@ new_filtered_bysink = ( name, collector, filter ) ->
       # mainstream.push PS.$watch ( d ) -> whisper '10191-6', 'confluence', jr d
       mainstream.push PS.$tee new_filtered_bysink 'number', numbers,  ( d ) -> CND.isa_number d
       mainstream.push PS.$tee new_filtered_bysink 'text',   texts,    ( d ) -> CND.isa_text d
-      mainstream.push PS.$tee new_filtered_bysink 'other',  null,     ( d ) -> ( not CND.isa_number d ) and ( not CND.isa_text d )
-      mainstream.push PS.$drain drainer
+      mainstream.push PS.$tee new_filtered_bysink 'other',  others,   ( d ) -> ( not CND.isa_number d ) and ( not CND.isa_text d )
+      mainstream.push PS.$drain ->
+        echo xrpr R
+        resolve R
       PS.pull mainstream...
       #...................................................................................................
       max_idx = ( Math.max probe[ 0 ].length, probe[ 1 ].length ) - 1
       for idx in [ 0 .. max_idx ]
-        source_1.send x if ( x = probe[ 0 ][ idx ] )?
-        source_2.send x if ( x = probe[ 1 ][ idx ] )?
+        source_1.send probe[ 0 ][ idx ] if idx < probe[ 0 ].length
+        source_2.send probe[ 1 ][ idx ] if idx < probe[ 1 ].length
       source_1.end()
       source_2.end()
   done()
@@ -223,7 +227,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "divert" ] = ( T, done ) ->
+@[ "tee with filter" ] = ( T, done ) ->
   probes_and_matchers = [
     [[10,11,12,13,14,15,16,17,18,19,20],{"odd_numbers":[11,13,15,17,19],"all_numbers":[10,11,12,13,14,15,16,17,18,19,20]},null]
     ]
@@ -308,32 +312,30 @@ new_filtered_bysink = ( name, collector, filter ) ->
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
-    R = null
+    R = { bystream: [], mainstream: [], }
     #.......................................................................................................
     await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
       byline    = []
       byline.push PS.new_random_async_value_source 0.1, probe[ 0 ]
       byline.push $ ( d, send ) -> send [ 'bystream', d, ]
-      byline.push $ { first: 'first', last: 'last', }, ( d, send ) ->
-        if d in [ 'first', 'last', ]
-          warn 'bystream', jr d
-        else
-          whisper 'bystream', jr d
+      # byline.push PS.$watch ( d ) -> debug '37333', 'bystream', xrpr d
+      # byline.push $ { first: 'first', last: 'last', }, ( d, send ) ->
+      #   if d in [ 'first', 'last', ] then warn    'bystream', xrpr d
+      #   else                              whisper 'bystream', xrpr d
       #.....................................................................................................
       mainline = []
       mainline.push PS.new_random_async_value_source probe[ 1 ]
       mainline.push $ ( d, send ) -> send [ 'mainstream', d, ]
       mainline.push PS.$wye PS.pull byline...
-      mainline.push $ { first: 'first', last: 'last', }, ( d, send ) ->
-        if d in [ 'first', 'last', ]
-          warn 'mainstream', jr d
-        else
-          whisper 'mainstream', jr d
-      mainline.push PS.$collect()
+      # mainline.push $ { first: 'first', last: 'last', }, ( d, send ) ->
+      #   if d in [ 'first', 'last', ] then warn    'mainstream', xrpr d
+      #   else                              whisper 'mainstream', xrpr d
       mainline.push PS.$watch ( d ) ->
-        R       = { bystream: [], mainstream: [], }
-        R[ x[ 0 ] ].push x[ 1 ] for x in d
+        debug '37333', xrpr d
+        R[ d[ 0 ] ].push d[ 1 ]
       mainline.push PS.$drain ->
+        echo 'result:   ', xrpr R
+        echo 'matcher:  ', xrpr matcher
         help 'ok'
         resolve R
       PS.pull mainline...
@@ -439,14 +441,13 @@ new_filtered_bysink = ( name, collector, filter ) ->
 
 ############################################################################################################
 unless module.parent?
-  # test @, { timeout: 5000, }
-  # test @[ "new_merged_source 1" ]
-  # test @[ "$wye 1" ]
-  # test @[ "$wye 2" ]
-  # test @[ "$wye 3" ], { timeout: 5000, }
-  # test @[ "divert" ]
-  # test @[ "bifurcate" ]
-  # test @[ "wye from asnyc random sources" ]
-  # test @[ "$wye 4" ], { timeout: 2000, }
-  test @[ "wye with duplex pair" ]
-
+  test @, { timeout: 5000, }
+  # test @[ "wye with duplex pair"            ]
+  # test @[ "new_merged_source 1"             ]
+  # test @[ "$wye 1"                          ]
+  # test @[ "$wye 2"                          ]
+  # test @[ "tee with filter"                 ]
+  # test @[ "bifurcate"                       ]
+  # test @[ "wye from asnyc random sources"   ]
+  # test @[ "$wye 3"                          ]
+  # test @[ "$wye 4"                          ]
