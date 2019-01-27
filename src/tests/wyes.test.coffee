@@ -37,19 +37,6 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
 # https://github.com/scrapjs/pull-imux
 # https://github.com/dominictarr/pull-flow (https://github.com/pull-stream/pull-stream/issues/4)
 
-#-----------------------------------------------------------------------------------------------------------
-provide_wye = ->
-  @$wye = ( stream, use_defer ) ->
-    new_duplex_pair     = require 'pull-pair/duplex'
-    [ client, server, ] = new_duplex_pair()
-    serverline          = []
-    serverline.push @new_merged_source server, stream
-    serverline.push @$defer() if use_defer
-    # serverline.push @$watch ( d ) -> urge d
-    serverline.push server
-    @pull serverline...
-    return client
-provide_wye.apply PS
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "wye with duplex pair" ] = ( T, done ) ->

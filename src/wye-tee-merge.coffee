@@ -17,6 +17,7 @@ debug                     = CND.get_logger 'debug',     badge
 { jr }                    = CND
 mux                       = require 'pull-mux' ### https://github.com/nichoth/pull-mux ###
 defer                     = setImmediate
+assign                    = Object.assign
 
 #-----------------------------------------------------------------------------------------------------------
 @$tee = ( a, b ) ->
@@ -67,64 +68,13 @@ defer                     = setImmediate
   return @pull pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
-@$wye = ( bystream ) ->
-  pair              = ( require 'pull-pair' )()
-  pushable          = @new_push_source()
-  subline           = []
-  byline            = []
-  end_sym           = Symbol 'end'
-  bystream_ended    = false
-  substream_ended   = false
-  #.........................................................................................................
-  subline.push pair.source
-  # subline.push @$ { last: end_sym, }, ( d, send ) ->
-  #   send d
-  subline.push @$defer()
-  subline.push @$async { last: end_sym, }, ( d, send, done ) ->
-    debug CND.yellow '11190-1', d
-    if d is end_sym
-      substream_ended = true
-      debug CND.white '22209-1 pipestreams.$wye', d, { bystream_ended, substream_ended, }
-      if bystream_ended
-        # debug '66373-1', "ending pushable"
-        # pushable.end()
-        # defer -> done()
-        defer ->
-          debug '66373-1', "ending pushable"
-          pushable.end()
-          defer -> done()
-    else
-      pushable.send d
-      done()
-    return null
-  subline.push @$defer()
-  subline.push @$drain()
-  #.........................................................................................................
-  byline.push bystream
-  byline.push @$show title: '33839'
-  byline.push @$defer()
-  byline.push @$async { last: end_sym, }, ( d, send, done ) ->
-    debug CND.yellow '11190-2', d
-    if d is end_sym
-      bystream_ended = true
-      debug CND.white '22209-2 pipestreams.$wye', d, { bystream_ended, substream_ended, }
-      if substream_ended
-        # debug '66373-2', "ending pushable"
-        # pushable.end()
-        # defer -> done()
-        defer ->
-          debug '66373-2', "ending pushable"
-          pushable.end()
-          defer -> done()
-    else
-      send d
-      done()
-    return null
-  #.........................................................................................................
-  byline.push @$defer()
-  @pull subline...
-  confluence = @new_merged_source pushable, @pull byline...
-  return { sink: pair.sink, source: confluence, }
-
-
-
+@$wye = ( stream, settings ) ->
+  new_duplex_pair     = require 'pull-pair/duplex'
+  settings            = assign { defer: false, }, settings
+  [ client, server, ] = new_duplex_pair()
+  serverline          = []
+  serverline.push @new_merged_source server, stream
+  serverline.push @$defer() if settings.defer
+  serverline.push server
+  @pull serverline...
+  return client
