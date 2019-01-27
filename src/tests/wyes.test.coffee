@@ -37,6 +37,57 @@ defer                     = setImmediate
 
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "wye with duplex pair" ] = ( T, done ) ->
+  new_duplex_pair     = require 'pull-pair/duplex'
+  probes_and_matchers = [
+    [[false,false,false,[11,12,13],[21,22,23,24,25]],[22,42,24,44,26,46,48,50],null]
+    [[false,false,true,[11,12,13],[21,22,23,24,25]],[22,42,24,44,26,46,48,50],null]
+    [[false,true,false,[11,12,13],[21,22,23,24,25]],[22,42,24,44,26,46,48,50],null]
+    [[false,true,true,[11,12,13],[21,22,23,24,25]],[22,42,24,44,26,46,48,50],null]
+    [[true,false,false,[11,12,13],[21,22,23,24,25]],[42,44,46,48,50,22,24,26],null]
+    [[true,false,true,[11,12,13],[21,22,23,24,25]],[42,44,46,48,50,22,24,26],null]
+    [[true,true,false,[11,12,13],[21,22,23,24,25]],[42,44,46,48,50,22,24,26],null]
+    [[true,true,true,[11,12,13],[21,22,23,24,25]],[42,44,46,48,50,22,24,26],null]
+    ]
+  #.........................................................................................................
+  $wye = ( stream, use_defer ) ->
+    $log                = PS.get_logger 'b', 'red'
+    [ client, server, ] = new_duplex_pair()
+    serverline          = []
+    serverline.push PS.new_merged_source server, stream
+    serverline.push PS.$defer() if use_defer
+    # serverline.push PS.$watch ( d ) -> urge d
+    serverline.push $ ( d, send ) -> send d * 2
+    serverline.push server
+    PS.pull serverline...
+    return client
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
+      $log                = PS.get_logger 'm', 'gold'
+      [ use_defer_1
+        use_defer_2
+        use_defer_3
+        a
+        b ]               = probe
+      source_a            = PS.new_value_source a
+      source_b            = PS.new_value_source b
+      collector           = []
+      clientline          = []
+      clientline.push source_a
+      clientline.push PS.$defer() if use_defer_1
+      clientline.push $wye source_b, use_defer_3
+      clientline.push PS.$defer() if use_defer_2
+      clientline.push PS.$collect { collector, }
+      # clientline.push PS.$show()
+      clientline.push PS.$drain -> resolve collector
+      PS.pull clientline...
+  #.........................................................................................................
+  done()
+  return null
+
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "new_merged_source 1" ] = ( T, done ) ->
   probes_and_matchers = [
     [[["a","b","c"],[1,2,3,4,5,6]],["a",1,"b",2,"c",3,4,5,6],null]
@@ -388,7 +439,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
 
 ############################################################################################################
 unless module.parent?
-  test @, { timeout: 5000, }
+  # test @, { timeout: 5000, }
   # test @[ "new_merged_source 1" ]
   # test @[ "$wye 1" ]
   # test @[ "$wye 2" ]
@@ -397,4 +448,5 @@ unless module.parent?
   # test @[ "bifurcate" ]
   # test @[ "wye from asnyc random sources" ]
   # test @[ "$wye 4" ], { timeout: 2000, }
+  test @[ "wye with duplex pair" ]
 
