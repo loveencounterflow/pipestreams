@@ -27,12 +27,12 @@ L = @
 do ->
   paths = glob.sync PATH.join __dirname, '*.test.js'
   for path in paths
-    debug '39838', path
+    # debug '39838', path
     module = require path
     for key, value of module
       continue if key.startsWith '_'
+      debug '39838', path, key
       throw new Error "duplicate key #{rpr key}" if L[ key ]?
-      debug '39838', key
       L[ key ] = value.bind L
   test L
   help "tested:"

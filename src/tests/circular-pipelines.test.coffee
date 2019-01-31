@@ -33,16 +33,16 @@ PS                        = require '../..'
     await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
       #.....................................................................................................
       [ use_defer, values..., ] = probe
-      buffer                    = [ values..., ]
-      mainsource                = PS.new_refillable_source buffer, { repeat: 1, }
+      refillable                = [ values..., ]
+      mainsource                = PS.new_refillable_source refillable, { repeat: 2, show: true, }
       collector                 = []
       mainline                  = []
       mainline.push mainsource
       mainline.push PS.$defer() if use_defer
       mainline.push $ ( d, send ) ->
         if d > 1
-          if d %% 2 is 0 then buffer.push d / 2
-          else                buffer.push d * 3 + 1
+          if d %% 2 is 0 then refillable.push d / 2
+          else                refillable.push d * 3 + 1
         send d
       mainline.push PS.$collect { collector, }
       mainline.push PS.$drain ->
@@ -85,33 +85,13 @@ PS                        = require '../..'
   done()
   return null
 
-#-----------------------------------------------------------------------------------------------------------
-@[ "_generator as source 2" ] = ( T, done ) ->
-  count = 0
-  #.........................................................................................................
-  g = ( max ) ->
-    loop
-      break if count >= max
-      yield ++count
-    return null
-  #.........................................................................................................
-  await T.perform null, [1,2,3,4,null,6,7,8,9,10], ->
-    return new Promise ( resolve ) ->
-      pipeline = []
-      pipeline.push PS.new_generator_source g 10
-      pipeline.push $ ( d, send ) -> send if d is 5 then null else d
-      pipeline.push PS.$show()
-      pipeline.push PS.$collect()
-      pipeline.push PS.$watch ( d ) ->
-        debug '22920', d
-        resolve d
-      pipeline.push PS.$drain()
-      PS.pull pipeline...
-  done()
-  return null
 
 
 ############################################################################################################
 unless module.parent?
   test @
+  # test @[ "circular pipeline 1" ]
+  # test @[ "circular pipeline 2" ]
+  # test @[ "generator as source 2" ]
+
 
