@@ -356,6 +356,9 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 @$drain = ( on_end = null ) -> $pull_drain null, on_end
 
 #-----------------------------------------------------------------------------------------------------------
+@new_pausable = -> ( require 'pull-pause' )()
+
+#-----------------------------------------------------------------------------------------------------------
 @$watch = ( method ) ->
   return map ( data ) =>
     method data
