@@ -359,10 +359,10 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 @new_pausable = -> ( require 'pull-pause' )()
 
 #-----------------------------------------------------------------------------------------------------------
-@$watch = ( method ) ->
-  return map ( data ) =>
-    method data
-    return data
+@$watch = ( P..., method ) -> @$ P..., ( d, send ) =>
+  method d
+  send d
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
 @pull = ( methods... ) ->

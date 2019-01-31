@@ -213,6 +213,27 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
   done()
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "watch with end detection" ] = ( T, done ) ->
+  [ probe, matcher, error, ] = ["abcdef",["(","*a*","|","*b*","|","*c*","|","*d*","|","*e*","|","*f*",")"],null]
+  await T.perform probe, matcher, error, -> new Promise ( resolve, reject ) ->
+    collector = []
+    pipeline  = []
+    pipeline.push PS.new_value_source Array.from probe
+    pipeline.push $ ( d, send ) -> send "*#{d}*"
+    pipeline.push PS.$watch { first: '(', between: '|', last: ')', }, ( d ) ->
+      debug '44874', xrpr d
+      collector.push d
+    # pipeline.push PS.$collect { collector, }
+    pipeline.push PS.$drain ->
+      help 'ok'
+      debug '44874', xrpr collector
+      resolve collector
+    PS.pull pipeline...
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "wrap FS object for sink" ] = ( T, done ) ->
   output_path   = '/tmp/pipestreams-test-output.txt'
   output_stream = FS.createWriteStream output_path
@@ -384,4 +405,9 @@ unless module.parent?
   # test @[ "$surround async" ]
   # test @[ "end push source (1)" ]
   # test @[ "end push source (2)" ]
-  test @[ "end random async source" ]
+  # test @[ "end random async source" ]
+  test @[ "watch with end detection" ]
+
+
+
+
