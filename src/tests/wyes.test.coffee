@@ -425,6 +425,76 @@ new_filtered_bysink = ( name, collector, filter ) ->
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "$wye 5" ] = ( T, done ) ->
+  ### This test uses a wye to implement a looping transform. The transform's
+  byline starts with a wye whose refillable source is used to implement the
+  loop. Observe that a wye cannot come first in  pipeline, so we put a `$pass()`
+  transform first to satisfy that requirement. The transform will accept texts
+  and pas them with as many stars as needed, one at a time, until the text's
+  length is at least 5 characters. Hence, each incoming text may loop for a
+  number of times: a 4-character text gets an additional `*` and doesn't loop at
+  all, a single-character text gets one star and is the sent back into the
+  wye,so it will loop 3 times before having grown to 5 characters. These
+  different looping times mean that a new text may enter the loop before a
+  previous data item has finished looping; to prevent that, a synchronizing
+  stage has been implemented with a pausable transform and two gates; these are
+  situated in the mainline.
+
+  For unknown reasons, the construct does not work with
+  `PS.new_random_async_value_source()`.
+  ###
+  probes_and_matchers = [
+    [[true,false,["a","fine","day"]],["a****","fine*","day**"],null]
+    [[true,true,["a","fine","day"]],["a****","fine*","day**"],null]
+    # [[false,false,["a","fine","day"]],["a****","fine*","day**"],null]
+    # [[false,true,["a","fine","day"]],["a****","fine*","day**"],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    #.......................................................................................................
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      [ use_mainstream_vs
+        use_defer_1
+        mainline_values ] = probe
+      R                   = []
+      #.....................................................................................................
+      $process = ->
+        byline      = []
+        refillable  = []
+        byline.push PS.$pass()
+        # byline.push PS.$defer()
+        byline.push PS.$wye PS.new_refillable_source refillable, { repeat: 3, show: true, }
+        byline.push PS.$watch ( d ) -> info 'bystream', xrpr d
+        byline.push $ ( d, send ) ->
+          if d.length < 5 then refillable.push d + '*'
+          else send d
+          return null
+        return PS.pull byline...
+      #.....................................................................................................
+      pausable = PS.new_pausable()
+      mainline = []
+      if      use_mainstream_vs then  mainline.push PS.new_value_source               mainline_values
+      else                            mainline.push PS.new_random_async_value_source  mainline_values
+      mainline.push PS.$show title: 'mainstream'
+      mainline.push PS.$defer() if use_defer_1
+      mainline.push pausable
+      mainline.push PS.$watch ( d ) -> pausable.pause(); debug '37787', 'pause'
+      mainline.push PS.$watch ( d ) -> urge 'mainstream 1', xrpr d
+      mainline.push $process()
+      mainline.push PS.$watch ( d ) -> pausable.resume(); debug '37787', 'resume'
+      mainline.push PS.$watch ( d ) -> urge 'mainstream 2', xrpr d
+      mainline.push PS.$collect { collector: R, }
+      mainline.push PS.$drain ->
+        help 'ok'
+        resolve R
+      mainstream          = PS.pull mainline...
+      #.....................................................................................................
+      return null
+  #.........................................................................................................
+  done()
+  return null
+
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "circular stream with wye and refillable" ] = ( T, done ) ->
@@ -496,7 +566,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
 
 ############################################################################################################
 unless module.parent?
-  # test @, { timeout: 5000, }
+  test @, { timeout: 5000, }
   # test @[ "wye with duplex pair"            ]
   # test @[ "new_merged_source 1"             ]
   # test @[ "$wye 1"                          ]
@@ -506,4 +576,7 @@ unless module.parent?
   # test @[ "wye from asnyc random sources"   ]
   # test @[ "$wye 3"                          ]
   # test @[ "$wye 4"                          ]
-  test @[ "circular stream with wye and refillable" ]
+  # test @[ "$wye 5"                          ]
+  # test @[ "circular stream with wye and refillable" ]
+
+
