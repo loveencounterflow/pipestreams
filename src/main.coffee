@@ -42,6 +42,7 @@ return_id                 = ( x ) -> x
 @symbols =
   misfit:       Symbol 'misfit'
   last:         Symbol 'last'
+  surround:     Symbol 'surround'
   end:          Symbol.for 'pipestreams:end'
   discard:      Symbol.for 'pipestreams:discard'
 
@@ -359,10 +360,32 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 @new_pausable = -> ( require 'pull-pause' )()
 
 #-----------------------------------------------------------------------------------------------------------
-@$watch = ( P..., method ) -> @$ P..., ( d, send ) =>
-  method d
-  send d
-  return null
+@$watch = ( settings, method ) ->
+  #.........................................................................................................
+  switch arity = arguments.length
+    #.......................................................................................................
+    when 1
+      [ settings, method, ] = [ null, settings, ]
+      #.....................................................................................................
+      return @$ ( d, send ) =>
+        method d
+        send d
+        return null
+    #.......................................................................................................
+    when 2
+      return @$watch method unless settings?
+      settings        = assign {}, settings
+      settings[ key ] = [ @symbols.surround, value, ] for key, value of settings
+      #.....................................................................................................
+      return @$ settings, ( d, send ) =>
+        if ( CND.isa_list d ) and ( d[ 0 ] is @symbols.surround )
+          method d[ 1 ]
+        else
+          method d
+          send d
+        return null
+  #.........................................................................................................
+  throw new Error "µ18244 expected one or two arguments, got #{arity}"
 
 #-----------------------------------------------------------------------------------------------------------
 @pull = ( methods... ) ->
