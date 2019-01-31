@@ -172,7 +172,7 @@ return_id                 = ( x ) -> x
     return handler abort if abort
     if values.length is 0
       trailer_count  += +1
-      info '23983', "refillable source depeleted: #{trailer_count} / #{settings.repeat}" if settings.show
+      info '23983', "refillable source depleted: #{trailer_count} / #{settings.repeat}" if settings.show
       if trailer_count < settings.repeat
         value           = settings.trailer
       else
