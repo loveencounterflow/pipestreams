@@ -373,7 +373,6 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
     throw new Error "µ25478 expected a function, got a #{type} for argument # #{idx + 1}"
   return pull methods...
 
-
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( settings ) ->
   collector = settings?.collector ? []
