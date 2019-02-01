@@ -355,64 +355,6 @@ and it will stop after n items! ###
   done()
   return null
 
-#-----------------------------------------------------------------------------------------------------------
-@[ "demo watch pipeline on abort 2" ] = ( T, done ) ->
-  # through = require 'pull-through'
-  probes_and_matchers = [
-    [[false,[1,2,3,null,5]],[1,1,1,2,2,2,3,3,3,null,null,null,5,5,5],null]
-    [[true,[1,2,3,null,5]],[1,1,1,2,2,2,3,3,3,null,null,null,5,5,5],null]
-    [[false,[1,2,3,"stop",25,30]],[1,1,1,2,2,2,3,3,3],null] #! expected result: [1,1,1,2,2,2,3,3,3,null,null,null]
-    [[true,[1,2,3,"stop",25,30]],[1,1,1,2,2,2,3,3,3],null] #! expected result: [1,1,1,2,2,2,3,3,3,null,null,null]
-    [[false,[1,2,3,null,"stop",25,30]],[1,1,1,2,2,2,3,3,3,null,null,null],null]
-    [[true,[1,2,3,null,"stop",25,30]],[1,1,1,2,2,2,3,3,3,null,null,null],null]
-    [[false,[1,2,3,undefined,"stop",25,30]],[1,1,1,2,2,2,3,3,3,undefined,undefined,undefined,],null]
-    [[true,[1,2,3,undefined,"stop",25,30]],[1,1,1,2,2,2,3,3,3,undefined,undefined,undefined,],null]
-    [[false,["stop",25,30]],[],null]
-    [[true,["stop",25,30]],[],null]
-    ]
-  #.........................................................................................................
-  aborting_map = ( use_defer, mapper ) ->
-    react = ( handler, data ) ->
-      if data is 'stop' then  handler null, PS.symbols.end
-      else                    handler null, mapper data
-    # a sink function: accept a source...
-    return ( read ) ->
-      # ...but return another source!
-      return ( abort, handler ) ->
-        read abort, ( error, data ) ->
-          # if the stream has ended, pass that on.
-          return handler error if error
-          if use_defer then  defer -> react handler, data
-          else                        react handler, data
-          return null
-        return null
-      return null
-  #.........................................................................................................
-  for [ probe, matcher, error, ] in probes_and_matchers
-    await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
-      #.....................................................................................................
-      [ use_defer
-        values ]  = probe
-      source      = source_from_values values
-      collector   = []
-      pipeline    = []
-      pipeline.push source
-      pipeline.push map ( d ) -> info '--->(', xrpr d; return d
-      pipeline.push aborting_map use_defer, ( d ) -> info '22398-1', xrpr d; return d
-      pipeline.push map ( d ) -> info '--->)', xrpr d; return d
-      pipeline.push PS.$ ( d, send ) -> info '22398-2', xrpr d; collector.push d; send d
-      pipeline.push PS.$ ( d, send ) -> info '22398-3', xrpr d; collector.push d; send d
-      pipeline.push PS.$ ( d, send ) -> info '22398-4', xrpr d; collector.push d; send d
-      # pipeline.push PS.$map ( d ) -> info '22398-2', xrpr d; collector.push d; return d
-      # pipeline.push PS.$map ( d ) -> info '22398-3', xrpr d; collector.push d; return d
-      # pipeline.push PS.$map ( d ) -> info '22398-4', xrpr d; collector.push d; return d
-      pipeline.push PS.$drain ->
-        help '44998', xrpr collector
-        resolve collector
-      pull pipeline...
-  #.........................................................................................................
-  done()
-  return null
 
 
 
@@ -420,6 +362,7 @@ and it will stop after n items! ###
 unless module.parent?
   null
   test @
+  # test @[ "demo through with null" ]
   # test @[ "demo watch pipeline on abort 1" ]
   # test @[ "demo watch pipeline on abort 2" ]
 
