@@ -1,7 +1,6 @@
 
 const looper  = require( './looper' );
 const symbols = require( '../lib/_symbols' );
-console.log(symbols.end)
 
 const pull_through = function (writer, ender) {
   return function (read) {

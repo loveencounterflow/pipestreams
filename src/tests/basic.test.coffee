@@ -478,7 +478,8 @@ unless module.parent?
   # include = []
   # @_prune()
   # @_main()
-  test @
+  # test @
+  test @[ "remit with end detection" ]
   # test @[ "$surround async" ]
   # test @[ "end push source (1)" ]
   # test @[ "end push source (2)" ]
