@@ -442,6 +442,16 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
       return send record
     send record if rnd() < p
 
+
+#===========================================================================================================
+# NEW LIBRARY
+#-----------------------------------------------------------------------------------------------------------
+@_copy_library = ->
+  ### `_copy_library()` may be used to derive a new instance of the PiepStreams library to alter
+  configurations. ###
+  CND.deep_copy @
+
+
 ############################################################################################################
 ### Gather methods from submodules, bind all methods ###
 L = @
