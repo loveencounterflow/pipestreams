@@ -54,7 +54,6 @@ return_id                 = ( x ) -> x
 @_isa_duplex_njs_stream     = ( x ) -> ( @_isa_njs_stream x ) and x.readable and     x.writable
 
 
-
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
@@ -270,7 +269,7 @@ return_id                 = ( x ) -> x
     else
       method data_between, send if send_between
     method data_before, send  if send_before
-    method d,        send
+    method d,           send
     method data_after,  send  if send_after
     self = null
     return null
