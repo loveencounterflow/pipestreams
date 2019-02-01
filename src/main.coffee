@@ -43,8 +43,8 @@ return_id                 = ( x ) -> x
   misfit:       Symbol 'misfit'
   last:         Symbol 'last'
   surround:     Symbol 'surround'
-  end:          Symbol.for 'pipestreams:end'
-  discard:      Symbol.for 'pipestreams:discard'
+  end:          pull_through.symbols.end
+  discard:      Symbol 'discard'
 
 #===========================================================================================================
 # ISA METHODS
