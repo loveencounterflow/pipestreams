@@ -40,7 +40,6 @@
     "pull-split": "^0.2.0",
     "pull-stream": "^3.6.9",
     "pull-tee": "^2.0.1",
-    "pull-through-with-end-symbol": "^1.0.19",
     "pull-utf8-decoder": "^1.0.2",
     "stack-trace": "0.0.10",
     "stream-to-pull-stream": "^1.7.2",

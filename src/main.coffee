@@ -26,7 +26,7 @@ $pull_drain               = require 'pull-stream/sinks/drain'
 $values                   = require 'pull-stream/sources/values'
 $paramap                  = require 'pull-paramap'
 pull                      = require 'pull-stream'
-pull_through              = require 'pull-through-with-end-symbol'
+pull_through              = require '../deps/pull-through-with-end-symbol'
 pull_cont                 = require 'pull-cont'
 map                       = require './_map_errors'
 #...........................................................................................................
@@ -39,12 +39,8 @@ return_id                 = ( x ) -> x
   assign
   jr }                    = CND
 #...........................................................................................................
-@symbols =
-  misfit:       Symbol 'misfit'
-  last:         Symbol 'last'
-  surround:     Symbol 'surround'
-  end:          pull_through.symbols.end
-  discard:      Symbol 'discard'
+@symbols                  = require './_symbols'
+
 
 #===========================================================================================================
 # ISA METHODS
