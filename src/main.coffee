@@ -249,7 +249,9 @@ return_id                 = ( x ) -> x
   throw new Error "µ20888 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   #.........................................................................................................
   self          = null
-  send          = ( data ) => self.queue data
+  send          = ( d ) =>
+    throw new Error "µ93892 called `send` method too late" unless self?
+    self.queue d
   data_first    = settings.first
   data_before   = settings.before
   data_between  = settings.between
@@ -264,7 +266,7 @@ return_id                 = ( x ) -> x
   is_first      = true
   PS            = @
   #.........................................................................................................
-  on_data = ( data ) ->
+  on_data = ( d ) ->
     self = @
     if is_first
       is_first = false
@@ -272,19 +274,19 @@ return_id                 = ( x ) -> x
     else
       method data_between, send if send_between
     method data_before, send  if send_before
-    method data,        send
+    method d,        send
     method data_after,  send  if send_after
     self = null
     return null
   #.........................................................................................................
-  if send_last
-    on_end = ->
+  on_end = ->
+    if send_last
       self = @
       method data_last, send
       self = null
-      # defer -> @queue PS.symbols.end
-      @queue PS.symbols.end
-      return null
+    # defer -> @queue PS.symbols.end
+    @queue PS.symbols.end
+    return null
   #.........................................................................................................
   return pull_through on_data, on_end
 
@@ -399,9 +401,9 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( settings ) ->
   collector = settings?.collector ? []
-  return @$ { last: @symbols.last, }, ( data, send ) =>
-    if data is @symbols.last then send collector
-    else collector.push data
+  return @$ { last: @symbols.last, }, ( d, send ) =>
+    if d is @symbols.last then send collector
+    else collector.push d
     return null
 
 #-----------------------------------------------------------------------------------------------------------
