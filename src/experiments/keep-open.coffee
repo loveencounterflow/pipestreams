@@ -30,7 +30,6 @@ test_continuity_1 = ->
   pull_through    = require 'pull-through'
   new_pushable    = require 'pull-pushable'
   map             = require '../_map_errors'
-  end_sym         = Symbol.for 'pipestreams:end'
   #.........................................................................................................
   $keep_open_with_timer = ->
     timer = every 1, -> process.stdout.write '*'
@@ -40,12 +39,12 @@ test_continuity_1 = ->
     return map ( d ) ->
       debug '20922', d
       # debug '20922', send
-      if d is end_sym
+      if d is PS.symbols.end
         clearInterval timer
       return d
   #.........................................................................................................
   $terminate_on_end_symbol = ->
-    return P.asyncMap ( d, handler ) -> if d is end_sym then handler true else handler null, d
+    return P.asyncMap ( d, handler ) -> if d is PS.symbols.end then handler true else handler null, d
   #.........................................................................................................
   $end_as_symbol = ->
     count = 0
@@ -55,7 +54,7 @@ test_continuity_1 = ->
       throw new Error "µ30903 on_end called more than once" if count > 1
       help 'on_end'
       @queue 'yo'
-      @queue end_sym
+      @queue PS.symbols.end
     return pull_through on_data, on_end
   #.........................................................................................................
   demo = -> new Promise ( resolve ) ->
