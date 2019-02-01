@@ -22,81 +22,89 @@ test                      = require 'guy-test'
 eq                        = CND.equals
 jr                        = JSON.stringify
 #...........................................................................................................
-PS                        = require '../..'
-{ $
-  $async }                = PS
+PS_ORIGINAL               = require '../..'
 #...........................................................................................................
 { jr
   copy
   is_empty
   assign }                = CND
-create 										= Object.create
+create                    = Object.create
 { inspect, }              = require 'util'
 xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infinity, maxArrayLength: Infinity, depth: Infinity, }
-abort                     = -> throw new Error 'abort'
+defer                     = setImmediate
+
+#-----------------------------------------------------------------------------------------------------------
+new_pipestreams_library = ( end_symbol = null ) ->
+  R = PS_ORIGINAL._copy_library()
+  if end_symbol isnt null
+    R.symbols.end = end_symbol
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "pipeline using altered configuration" ] = ( T, done ) ->
+  # through = require 'pull-through'
+  probes_and_matchers = [
+    [[false,[1,2,3,null,5]],[1,1,1,2,2,2,3,3,3,null,null,null,5,5,5],null]
+    [[false,[1,2,3,42,5]],[1,1,1,2,2,2,3,3,3],null]
+    # [[true,[1,2,3,null,5]],[1,1,1,2,2,2,3,3,3,null,null,null,5,5,5],null]
+    # [[false,[1,2,3,null,"stop",25,30]],[1,1,1,2,2,2,3,3,3,null,null,null],null]
+    # [[true,[1,2,3,null,"stop",25,30]],[1,1,1,2,2,2,3,3,3,null,null,null],null]
+    # [[false,[1,2,3,undefined,"stop",25,30]],[1,1,1,2,2,2,3,3,3,undefined,undefined,undefined,],null]
+    # [[true,[1,2,3,undefined,"stop",25,30]],[1,1,1,2,2,2,3,3,3,undefined,undefined,undefined,],null]
+    # [[false,["stop",25,30]],[],null]
+    # [[true,["stop",25,30]],[],null]
+    ]
+  #.........................................................................................................
+  my_end_sym                = 42
+  PS                        = new_pipestreams_library my_end_sym
+  debug PS.symbols
+  { $
+    $async }                = PS
+  #.........................................................................................................
+  aborting_map = ( use_defer, mapper ) ->
+    react = ( handler, data ) ->
+      if data is 'stop' then  handler true
+      else                    handler null, mapper data
+    # a sink function: accept a source...
+    return ( read ) ->
+      # ...but return another source!
+      return ( abort, handler ) ->
+        read abort, ( error, data ) ->
+          # if the stream has ended, pass that on.
+          return handler error if error
+          if use_defer then  defer -> react handler, data
+          else                        react handler, data
+          return null
+        return null
+      return null
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
+      #.....................................................................................................
+      [ use_defer
+        values ]  = probe
+      source      = PS.new_value_source values
+      collector   = []
+      pipeline    = []
+      pipeline.push source
+      pipeline.push aborting_map use_defer, ( d ) -> info '22398-1', xrpr d; return d
+      pipeline.push PS.$map ( d ) -> info '22398-2', xrpr d; collector.push d; return d
+      pipeline.push PS.$map ( d ) -> info '22398-3', xrpr d; collector.push d; return d
+      pipeline.push PS.$map ( d ) -> info '22398-4', xrpr d; collector.push d; return d
+      pipeline.push PS.$drain ->
+        help '44998', xrpr collector
+        resolve collector
+      PS.pull pipeline...
+  #.........................................................................................................
+  done()
+  return null
 
 
 
-{ key: '~end', }
-{ key: '~collect', }
-{ key: '~recycle',value: {key: 'foo', value: 42, }, }
-
-
-#===========================================================================================================
-provide_library = ->
-	@settings = { foo:42, bar: 0, }
-
-	@add = ( x ) -> x + @settings.foo
-
-#===========================================================================================================
-L1 = {}
-provide_library.apply L1
-L2 = assign ( Object.create L1 ), { settings: assign {}, L1.settings, { foo: 2, } }
-L3 = assign ( Object.create L1 ), { settings: assign ( Object.create L1.settings ), { foo: 3, } }
-L4 = CND.deep_copy L1
-L4.settings.foo = 4
-
-debug 'L1         	', xrpr L1
-debug 'L1.settings	', xrpr L1.settings
-debug 'L1.add     	', xrpr L1.add
-echo()
-debug 'L2         	', xrpr L2
-debug 'L2.settings	', xrpr L2.settings
-debug 'L2.add     	', xrpr L2.add
-echo()
-debug 'L3         	', xrpr L3
-debug 'L3.settings	', xrpr L3.settings
-debug 'L3.add     	', xrpr L3.add
-echo()
-debug 'L4         	', xrpr L4
-debug 'L4.settings	', xrpr L4.settings
-debug 'L4.add     	', xrpr L4.add
-echo()
-debug 'L1.add 100		', xrpr L1.add 100
-debug 'L2.add 100		', xrpr L2.add 100
-debug 'L3.add 100		', xrpr L3.add 100
-debug 'L4.add 100		', xrpr L4.add 100
-
-debug ( key for key of L1 ), ( key for key of L1.settings )
-debug ( key for key of L2 ), ( key for key of L2.settings )
-debug ( key for key of L3 ), ( key for key of L3.settings )
-debug ( key for key of L4 ), ( key for key of L4.settings )
-
-info ( eq ( Symbol     'x' ), ( Symbol     'x' ) ), ( eq ( Symbol     'x' ), ( Symbol     'y' ) )
-info ( eq ( Symbol.for 'x' ), ( Symbol.for 'x' ) ), ( eq ( Symbol.for 'x' ), ( Symbol.for 'y' ) )
-info ( eq { key: Symbol.for 'end', }, { key: Symbol.for 'end', } )
-info ( eq { key: Symbol.for 'end', }, { key: Symbol.for 'other', } )
-info ( eq { key: Symbol     'end', }, { key: Symbol     'end', } )
-d = { key: Symbol.for 'end', }
-info d, CND.deep_copy { key: Symbol.for 'end', }
-info eq ( Symbol.for 'x' ), CND.deep_copy ( Symbol.for 'x' )
-echo()
-info L1 is L2
-info L1 is L3
-info L1 is L4
-
-
-
-
-
-
+############################################################################################################
+unless module.parent?
+  null
+  test @
+  # test @[ "demo through with null" ]
+  # test @[ "demo watch pipeline on abort 1" ]
+  # test @[ "demo watch pipeline on abort 2" ]
