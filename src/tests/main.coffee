@@ -34,7 +34,7 @@ do ->
       debug '39838', path, key
       throw new Error "duplicate key #{rpr key}" if L[ key ]?
       L[ key ] = value.bind L
-  test L
+  test L, { timeout: 5000, }
   help "tested:"
 
 
