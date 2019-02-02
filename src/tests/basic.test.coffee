@@ -196,21 +196,24 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
 #-----------------------------------------------------------------------------------------------------------
 @[ "remit with end detection" ] = ( T, done ) ->
   # debug ( key for key of T ); xxx
+  pull_through              = require '../../deps/pull-through-with-end-symbol'
   pipeline = []
-  pipeline.push $values Array.from 'abcdef'
-  # pipeline.push pull_through ( ( data ) -> urge data ), ( -> urge 'ok'; @queue null )
-  # pipeline.push pull_through ( ( data ) -> urge data ), null
+  # pipeline.push $values Array.from 'abcdef'
+  pipeline.push PS.new_value_source Array.from 'abcdef'
+  pipeline.push PS.$map ( d ) -> return d
+  pipeline.push $ ( d, send ) -> send if d is 'c' then PS.symbols.end else d
+  pipeline.push PS.$pass()
+  pipeline.push pull_through ( ( d ) -> @queue d )
   pipeline.push $ { last: null, }, ( data, send ) ->
     if data?
       send data
       send '*' + data + '*'
     else
       send 'ok'
-  pipeline.push PS.$show()
-  pipeline.push $pull_drain()
+  pipeline.push $pull_drain null, ->
+    T.succeed "ok"
+    done()
   PS.pull pipeline...
-  T.succeed "ok"
-  done()
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "watch with end detection 1" ] = ( T, done ) ->
@@ -478,8 +481,8 @@ unless module.parent?
   # include = []
   # @_prune()
   # @_main()
-  # test @
-  test @[ "remit with end detection" ]
+  test @
+  # test @[ "remit with end detection" ]
   # test @[ "$surround async" ]
   # test @[ "end push source (1)" ]
   # test @[ "end push source (2)" ]
