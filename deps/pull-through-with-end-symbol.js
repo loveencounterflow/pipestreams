@@ -1,6 +1,19 @@
 
-const looper  = require( './looper' );
 const symbols = require( '../lib/_symbols' );
+
+var looper = function (fun) {
+  (function next () {
+    var loop = true, returned = false, sync = false
+    do {
+      sync = true; loop = false
+      fun.call(this, function () {
+        if(sync) loop = true
+        else     next()
+      })
+      sync = false
+    } while(loop)
+  })()
+}
 
 const pull_through = function (writer, ender) {
   return function (read) {
@@ -53,7 +66,6 @@ const pull_through = function (writer, ender) {
         else {
           // ...............................................................................................
           read( ended, function ( end, data ) {
-            // console.log( 'pull-through 88744-1 ' + require('util').inspect(data));
              // null has no special meaning for pull-stream
              // but now `Symbol.for( 'pipestreams:end' )` has
             if( end && end !== true ) {
