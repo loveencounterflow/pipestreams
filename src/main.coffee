@@ -39,7 +39,7 @@ return_id                 = ( x ) -> x
   assign
   jr }                    = CND
 #...........................................................................................................
-@symbols                  = require './_symbols'
+@_symbols                 = require './_symbols'
 
 
 #===========================================================================================================
@@ -69,7 +69,7 @@ return_id                 = ( x ) -> x
   PS            = @
   #.........................................................................................................
   send = ( d ) ->
-    return end() if d is PS.symbols.end
+    return end() if d is PS._symbols.end
     source.push d
     return null
   #.........................................................................................................
@@ -132,7 +132,7 @@ return_id                 = ( x ) -> x
       idx += +1
       after new_timeout(), tick
     else
-      # R.send @symbols.end
+      # R.send @_symbols.end
       R.end()
     return null
   #.........................................................................................................
@@ -156,13 +156,13 @@ return_id                 = ( x ) -> x
   Transforms down the line may choose to `values.push()` new values into the
   list, which will in time be sent down again. When a read occurs and `values`
   happens to be empty, a special value (the `trailer`, by default
-  `PS.symbols.discard`) will be sent down the line (only to be filtered out
+  `PS._symbols.discard`) will be sent down the line (only to be filtered out
   immediately) up to `repeat` times (by default one time) in a row to avoid
   depleting the pipeline. ###
-  settings      = assign { repeat: 1, trailer: @symbols.discard, show: false, }, settings
+  settings      = assign { repeat: 1, trailer: @_symbols.discard, show: false, }, settings
   trailer_count = 0
   #.........................................................................................................
-  filter        = @$filter ( d ) => d isnt @symbols.discard
+  filter        = @$filter ( d ) => d isnt @_symbols.discard
   #.........................................................................................................
   read          = ( abort, handler ) =>
     return handler abort if abort
@@ -205,11 +205,11 @@ return_id                 = ( x ) -> x
 #-----------------------------------------------------------------------------------------------------------
 @_get_remit_settings = ( hint, method ) ->
   defaults  =
-    first:    @symbols.misfit
-    last:     @symbols.misfit
-    between:  @symbols.misfit
-    after:    @symbols.misfit
-    before:   @symbols.misfit
+    first:    @_symbols.misfit
+    last:     @_symbols.misfit
+    between:  @_symbols.misfit
+    after:    @_symbols.misfit
+    before:   @_symbols.misfit
   settings  = assign {}, defaults
   switch arity = arguments.length
     when 1
@@ -222,11 +222,11 @@ return_id                 = ( x ) -> x
         settings = assign settings, hint
     else throw new Error "µ19358 expected 1 or 2 arguments, got #{arity}"
   settings._surround = \
-    ( settings.first    isnt @symbols.misfit ) or \
-    ( settings.last     isnt @symbols.misfit ) or \
-    ( settings.between  isnt @symbols.misfit ) or \
-    ( settings.after    isnt @symbols.misfit ) or \
-    ( settings.before   isnt @symbols.misfit )
+    ( settings.first    isnt @_symbols.misfit ) or \
+    ( settings.last     isnt @_symbols.misfit ) or \
+    ( settings.between  isnt @_symbols.misfit ) or \
+    ( settings.after    isnt @_symbols.misfit ) or \
+    ( settings.before   isnt @_symbols.misfit )
   return { settings, method, }
 
 #-----------------------------------------------------------------------------------------------------------
@@ -244,22 +244,27 @@ return_id                 = ( x ) -> x
   throw new Error "µ20888 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   #.........................................................................................................
   self          = null
-  send          = ( d ) =>
-    throw new Error "µ93892 called `send` method too late" unless self?
-    self.queue d
   data_first    = settings.first
   data_before   = settings.before
   data_between  = settings.between
   data_after    = settings.after
   data_last     = settings.last
-  send_first    = data_first    isnt @symbols.misfit
-  send_before   = data_before   isnt @symbols.misfit
-  send_between  = data_between  isnt @symbols.misfit
-  send_after    = data_after    isnt @symbols.misfit
-  send_last     = data_last     isnt @symbols.misfit
+  send_first    = data_first    isnt @_symbols.misfit
+  send_before   = data_before   isnt @_symbols.misfit
+  send_between  = data_between  isnt @_symbols.misfit
+  send_after    = data_after    isnt @_symbols.misfit
+  send_last     = data_last     isnt @_symbols.misfit
   on_end        = null
   is_first      = true
   PS            = @
+  #.........................................................................................................
+  send = ( d ) ->
+    throw new Error "µ93892 called `send` method too late" unless self?
+    self.queue d
+  #.........................................................................................................
+  send.end = ->
+    throw new Error "µ09833 `send.end()` takes no arguments, got #{rpr [arguments...]}" unless arguments.length is 0
+    self.queue PS._symbols.end
   #.........................................................................................................
   on_data = ( d ) ->
     self = @
@@ -279,8 +284,8 @@ return_id                 = ( x ) -> x
       self = @
       method data_last, send
       self = null
-    # defer -> @queue PS.symbols.end
-    @queue PS.symbols.end
+    # defer -> @queue PS._symbols.end
+    @queue PS._symbols.end
     return null
   #.........................................................................................................
   return pull_through on_data, on_end
@@ -293,7 +298,7 @@ return_id                 = ( x ) -> x
   ### NOTE we're transitioning from the experimental `hint` call convention to the more flexible and
   standard `settings` (which are here placed first, not last, b/c one frequently wants to write out a
   function body as last argument). For a limited time, `'null'` is accepted in place of a `settings` object;
-  after that, `{ last: null }` (or using other value except `PS.symbols.misfit`) should be used. ###
+  after that, `{ last: null }` (or using other value except `PS._symbols.misfit`) should be used. ###
   #.........................................................................................................
   { settings, method, } = @_get_remit_settings P...
   throw new Error "µ18187 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
@@ -305,13 +310,13 @@ return_id                 = ( x ) -> x
   has_ended   = false
   #.........................................................................................................
   pipeline.push @$surround settings if settings._surround
-  pipeline.push @$surround { last: @symbols.last, }
+  pipeline.push @$surround { last: @_symbols.last, }
   #.........................................................................................................
   pipeline.push $paramap ( d, handler ) =>
     collector   = []
     #.......................................................................................................
     send = ( d ) =>
-      return handler true if d is @symbols.end
+      return handler true if d is @_symbols.end
       collector.unshift d
       return null
     #.......................................................................................................
@@ -321,7 +326,7 @@ return_id                 = ( x ) -> x
       handler true if has_ended and call_count < 1
       return null
     #.......................................................................................................
-    if d is @symbols.last
+    if d is @_symbols.last
       has_ended = true
       handler true if call_count < 1
     else
@@ -350,8 +355,10 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
-@$pass = -> map ( data ) => data
-@$drain = ( on_end = null ) -> $pull_drain null, on_end
+@$pass        =                   -> map ( data ) => data
+@$drain       = ( on_end = null ) -> $pull_drain null, on_end
+@$end_if      = ( filter )        -> @$ ( d, send ) -> if (     filter d ) then send.end() else send d
+@$continue_if = ( filter )        -> @$ ( d, send ) -> if ( not filter d ) then send.end() else send d
 
 #-----------------------------------------------------------------------------------------------------------
 @new_pausable = -> ( require 'pull-pause' )()
@@ -372,10 +379,10 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
     when 2
       return @$watch method unless settings?
       settings        = assign {}, settings
-      settings[ key ] = [ @symbols.surround, value, ] for key, value of settings
+      settings[ key ] = [ @_symbols.surround, value, ] for key, value of settings
       #.....................................................................................................
       return @$ settings, ( d, send ) =>
-        if ( CND.isa_list d ) and ( d[ 0 ] is @symbols.surround )
+        if ( CND.isa_list d ) and ( d[ 0 ] is @_symbols.surround )
           method d[ 1 ]
         else
           method d
@@ -396,8 +403,8 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( settings ) ->
   collector = settings?.collector ? []
-  return @$ { last: @symbols.last, }, ( d, send ) =>
-    if d is @symbols.last then send collector
+  return @$ { last: @_symbols.last, }, ( d, send ) =>
+    if d is @_symbols.last then send collector
     else collector.push d
     return null
 

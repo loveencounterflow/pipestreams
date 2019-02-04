@@ -194,14 +194,38 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
 #   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "remit with end detection" ] = ( T, done ) ->
-  # debug ( key for key of T ); xxx
+@[ "remit with end detection 1" ] = ( T, done ) ->
+  ### Sending `PS._symbols.end` has undefined behavior; in this case, it does end the stream, which is
+  OK. ###
+  # debug xrpr PS._symbols
+  # debug xrpr PS._symbols.end; xxx
   pull_through              = require '../../deps/pull-through-with-end-symbol'
   pipeline = []
   # pipeline.push $values Array.from 'abcdef'
   pipeline.push PS.new_value_source Array.from 'abcdef'
   pipeline.push PS.$map ( d ) -> return d
-  pipeline.push $ ( d, send ) -> send if d is 'c' then PS.symbols.end else d
+  pipeline.push $ ( d, send ) -> send if d is 'c' then PS._symbols.end else d
+  pipeline.push PS.$pass()
+  pipeline.push pull_through ( ( d ) -> @queue d )
+  pipeline.push $ { last: null, }, ( data, send ) ->
+    if data?
+      send data
+      send '*' + data + '*'
+    else
+      send 'ok'
+  pipeline.push $pull_drain null, ->
+    T.succeed "ok"
+    done()
+  PS.pull pipeline...
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "remit with end detection 2" ] = ( T, done ) ->
+  ### One of the proper ways to end (a.k.a. abort) a stream is to call `send.end()`. ###
+  pull_through              = require '../../deps/pull-through-with-end-symbol'
+  pipeline = []
+  pipeline.push PS.new_value_source Array.from 'abcdef'
+  pipeline.push PS.$map ( d ) -> return d
+  pipeline.push $ ( d, send ) -> if d is 'c' then send.end() else send d
   pipeline.push PS.$pass()
   pipeline.push pull_through ( ( d ) -> @queue d )
   pipeline.push $ { last: null, }, ( data, send ) ->
@@ -358,6 +382,7 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "end push source (1)" ] = ( T, done ) ->
+  ### The proper way to end a push source is to call `source.end()`. ###
   [ probe, matcher, error, ] = [["what","a","lot","of","little","bottles"],["what","a","lot","of","little","bottles"],null]
   await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
     R         = []
@@ -372,7 +397,7 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
     pull pipeline...
     for word in probe
       source.send word
-    source.send PS.symbols.end
+    source.end()
     return null
   #.........................................................................................................
   done()
@@ -380,6 +405,7 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "end push source (2)" ] = ( T, done ) ->
+  ### The proper way to end a push source is to call `source.end()`. ###
   [ probe, matcher, error, ] = [["what","a","lot","of","little","bottles","stop"],["what","a","lot","of","little","bottles"],null]
   await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
     R         = []
@@ -388,7 +414,53 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
     pipeline  = []
     pipeline.push source
     pipeline.push PS.$watch ( d ) -> info xrpr d
-    pipeline.push $ ( d, send ) -> send if d is 'stop' then PS.symbols.end else d
+    pipeline.push $ ( d, send ) -> if d is 'stop' then source.end() else send d
+    pipeline.push PS.$collect { collector: R, }
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push PS.$drain drainer
+    pull pipeline...
+    for word in probe
+      source.send word
+    return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "end push source (3)" ] = ( T, done ) ->
+  ### The proper way to end a push source is to call `source.end()`; `send.end()` is largely equivalent. ###
+  [ probe, matcher, error, ] = [["what","a","lot","of","little","bottles","stop"],["what","a","lot","of","little","bottles"],null]
+  await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+    R         = []
+    drainer   = -> help 'ok'; resolve R
+    source    = PS.new_push_source()
+    pipeline  = []
+    pipeline.push source
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push $ ( d, send ) -> if d is 'stop' then send.end() else send d
+    pipeline.push PS.$collect { collector: R, }
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push PS.$drain drainer
+    pull pipeline...
+    for word in probe
+      source.send word
+    return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "end push source (4)" ] = ( T, done ) ->
+  ### A stream may be ended by using an `$end_if()` (alternatively, `$continue_if()`) transform. ###
+  [ probe, matcher, error, ] = [["what","a","lot","of","little","bottles","stop"],["what","a","lot","of","little","bottles"],null]
+  await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+    R         = []
+    drainer   = -> help 'ok'; resolve R
+    source    = PS.new_push_source()
+    pipeline  = []
+    pipeline.push source
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push PS.$end_if ( d ) -> d is 'stop'
     pipeline.push PS.$collect { collector: R, }
     pipeline.push PS.$watch ( d ) -> info xrpr d
     pipeline.push PS.$drain drainer
@@ -437,7 +509,7 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
   #.........................................................................................................
   aborting_map = ( use_defer, mapper ) ->
     react = ( handler, data ) ->
-      if data is 'stop' then  handler null, PS.symbols.end
+      if data is 'stop' then  handler true
       else                    handler null, mapper data
     # a sink function: accept a source...
     return ( read ) ->
@@ -482,10 +554,13 @@ unless module.parent?
   # @_prune()
   # @_main()
   test @
-  # test @[ "remit with end detection" ]
+  # test @[ "remit with end detection 1" ]
+  # test @[ "remit with end detection 2" ]
   # test @[ "$surround async" ]
   # test @[ "end push source (1)" ]
   # test @[ "end push source (2)" ]
+  # test @[ "end push source (3)" ]
+  # test @[ "end push source (4)" ]
   # test @[ "end random async source" ]
   # test @[ "watch with end detection 1" ]
   # test @[ "watch with end detection 2" ]

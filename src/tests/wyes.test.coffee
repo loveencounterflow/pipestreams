@@ -338,7 +338,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
   probes_and_matchers = [
     [{"start_value":0.5,"delta":0.01,},[0.5,0.25,0.375,0.3125,0.34375,0.328125],null]
     ]
-  end_sym = Symbol.for 'end'
+  end_sym = Symbol 'end'
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
