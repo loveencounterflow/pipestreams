@@ -6,8 +6,8 @@
     "src/_symbols.coffee"
   ],
   "names": [],
-  "mappings": ";AACA;EAAA,MAAM,CAAC,OAAP,GACE;IAAA,MAAA,EAAc,MAAA,CAAO,QAAP,CAAd;IACA,IAAA,EAAc,MAAA,CAAO,MAAP,CADd;IAEA,QAAA,EAAc,MAAA,CAAO,UAAP,CAFd;IAGA,GAAA,EAAc,MAAA,CAAO,KAAP;EAHd;AADF",
+  "mappings": ";AACA;EAAA,MAAM,CAAC,OAAP,GACE;IAAA,MAAA,EAAc,MAAA,CAAO,QAAP,CAAd;IACA,GAAA,EAAc,MAAA,CAAO,KAAP;EADd;AADF",
   "sourcesContent": [
-    "\nmodule.exports =\n  misfit:       Symbol 'misfit'\n  last:         Symbol 'last'\n  surround:     Symbol 'surround'\n  end:          Symbol 'end'\n"
+    "\nmodule.exports =\n  misfit:       Symbol 'misfit'\n  end:          Symbol 'end'\n"
   ]
 }
