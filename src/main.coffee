@@ -69,7 +69,6 @@ return_id                 = ( x ) -> x
   PS            = @
   #.........................................................................................................
   send = ( d ) ->
-    return end() if d is PS._symbols.end
     source.push d
     return null
   #.........................................................................................................
@@ -99,7 +98,7 @@ return_id                 = ( x ) -> x
   will only be sent as soon as that method is called. ###
   triggersource   = @new_push_source()
   pipeline        = []
-  next_sym        = Symbol 'pipestreams:next'
+  next_sym        = Symbol 'next'
   pipeline.push @new_alternating_source triggersource, stream
   pipeline.push @$filter ( d ) -> d isnt next_sym
   R               = @pull pipeline...
@@ -132,7 +131,6 @@ return_id                 = ( x ) -> x
       idx += +1
       after new_timeout(), tick
     else
-      # R.send @_symbols.end
       R.end()
     return null
   #.........................................................................................................
@@ -150,19 +148,17 @@ return_id                 = ( x ) -> x
 
 #-----------------------------------------------------------------------------------------------------------
 @new_refillable_source = ( values, settings ) ->
-  ### A refillable source expects a list of `values` (or a listlike object with
-  a `shift()` method); when a read occurs, it will empty `values` one element at
-  a time, always shifting the leftmost element (with index zero) from `values`.
-  Transforms down the line may choose to `values.push()` new values into the
-  list, which will in time be sent down again. When a read occurs and `values`
-  happens to be empty, a special value (the `trailer`, by default
-  `PS._symbols.discard`) will be sent down the line (only to be filtered out
-  immediately) up to `repeat` times (by default one time) in a row to avoid
-  depleting the pipeline. ###
-  settings      = assign { repeat: 1, trailer: @_symbols.discard, show: false, }, settings
+  ### A refillable source expects a list of `values` (or a listlike object with a `shift()` method); when a
+  read occurs, it will empty `values` one element at a time, always shifting the leftmost element (with
+  index zero) from `values`. Transforms down the line may choose to `values.push()` new values into the
+  list, which will in time be sent down again. When a read occurs and `values` happens to be empty, a
+  special value (the `trailer`, by default a symbol) will be sent down the line (only to be filtered out
+  immediately) up to `repeat` times (by default one time) in a row to avoid depleting the pipeline. ###
+  discard_sym   = Symbol 'discard'
+  settings      = assign { repeat: 1, trailer: discard_sym, show: false, }, settings
   trailer_count = 0
   #.........................................................................................................
-  filter        = @$filter ( d ) => d isnt @_symbols.discard
+  filter        = @$filter ( d ) => d isnt discard_sym
   #.........................................................................................................
   read          = ( abort, handler ) =>
     return handler abort if abort
@@ -170,7 +166,7 @@ return_id                 = ( x ) -> x
       trailer_count  += +1
       info '23983', "refillable source depleted: #{trailer_count} / #{settings.repeat}" if settings.show
       if trailer_count < settings.repeat
-        value           = settings.trailer
+        value = settings.trailer
       else
         return handler true
     else
@@ -308,9 +304,10 @@ return_id                 = ( x ) -> x
   pipeline    = []
   call_count  = 0
   has_ended   = false
+  last_sym    = Symbol 'last'
   #.........................................................................................................
   pipeline.push @$surround settings if settings._surround
-  pipeline.push @$surround { last: @_symbols.last, }
+  pipeline.push @$surround { last: last_sym, }
   #.........................................................................................................
   pipeline.push $paramap ( d, handler ) =>
     collector   = []
@@ -326,7 +323,7 @@ return_id                 = ( x ) -> x
       handler true if has_ended and call_count < 1
       return null
     #.......................................................................................................
-    if d is @_symbols.last
+    if d is last_sym
       has_ended = true
       handler true if call_count < 1
     else
@@ -378,11 +375,15 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
     #.......................................................................................................
     when 2
       return @$watch method unless settings?
+      ### If any `surround` feature is called for, wrap all surround values so that we can safely
+      distinguish between them and ordinary stream values; this is necessary to prevent them from leaking
+      into the regular stream outside the `$watch` transform: ###
+      take_second     = Symbol 'take-second'
       settings        = assign {}, settings
-      settings[ key ] = [ @_symbols.surround, value, ] for key, value of settings
+      settings[ key ] = [ take_second, value, ] for key, value of settings
       #.....................................................................................................
       return @$ settings, ( d, send ) =>
-        if ( CND.isa_list d ) and ( d[ 0 ] is @_symbols.surround )
+        if ( CND.isa_list d ) and ( d[ 0 ] is take_second )
           method d[ 1 ]
         else
           method d
@@ -403,8 +404,9 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( settings ) ->
   collector = settings?.collector ? []
-  return @$ { last: @_symbols.last, }, ( d, send ) =>
-    if d is @_symbols.last then send collector
+  last_sym  = Symbol 'last'
+  return @$ { last: last_sym, }, ( d, send ) =>
+    if d is last_sym then send collector
     else collector.push d
     return null
 
