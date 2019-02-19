@@ -492,6 +492,29 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
   return null
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "read file chunks" ] = ( T, done ) ->
+  [ probe, matcher, error, ] = [ __filename, null, null, ]
+  await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+    R         = []
+    drainer   = -> help 'ok'; resolve null
+    source    = PS.read_chunks_from_file probe, 50
+    count     = 0
+    pipeline  = []
+    pipeline.push source
+    pipeline.push $ ( d, send ) -> send d.toString 'utf-8'
+    pipeline.push PS.$watch ->
+      count += +1
+      source.end() if count > 3
+    pipeline.push PS.$collect { collector: R, }
+    pipeline.push PS.$watch ( d ) -> info xrpr d
+    pipeline.push PS.$drain drainer
+    pull pipeline...
+    return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "demo watch pipeline on abort 2" ] = ( T, done ) ->
   # through = require 'pull-through'
   probes_and_matchers = [
@@ -553,7 +576,8 @@ unless module.parent?
   # include = []
   # @_prune()
   # @_main()
-  test @
+  # test @
+  test @[ "read file chunks" ]
   # test @[ "remit with end detection 1" ]
   # test @[ "remit with end detection 2" ]
   # test @[ "$surround async" ]

@@ -8,6 +8,7 @@ CND                       = require 'cnd'
 badge                     = 'PIPESTREAMS/NJS-STREAMS-AND-FILES'
 FS                        = require 'fs'
 STPS                      = require 'stream-to-pull-stream'
+defer                     = setImmediate
 
 
 
