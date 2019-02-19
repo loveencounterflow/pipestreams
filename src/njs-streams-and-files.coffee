@@ -26,6 +26,24 @@ STPS                      = require 'stream-to-pull-stream'
   return @read_from_nodejs_stream ( FS.createReadStream path, options )
 
 #-----------------------------------------------------------------------------------------------------------
+@read_chunks_from_file = ( path, byte_count ) ->
+  unless ( CND.isa_number byte_count ) and ( byte_count > 0 ) and ( byte_count is parseInt byte_count )
+    throw new Error "expected positive integer number, got #{rpr byte_count}"
+  pfy           = ( require 'util' ).promisify
+  source        = @new_push_source()
+  #.........................................................................................................
+  defer =>
+    fd    = await ( pfy FS.open ) path, 'r'
+    read  = pfy FS.read
+    loop
+      buffer = Buffer.alloc byte_count
+      await read fd, buffer, 0, byte_count, null
+      source.send buffer
+    return null
+  #.........................................................................................................
+  return source
+
+#-----------------------------------------------------------------------------------------------------------
 @write_to_file = ( path, options, on_stop ) ->
   ### TAINT consider using https://pull-stream.github.io/#pull-write-file instead ###
   ### TAINT code duplication ###
