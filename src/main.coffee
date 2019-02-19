@@ -451,7 +451,7 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 # NEW LIBRARY
 #-----------------------------------------------------------------------------------------------------------
 @_copy_library = ->
-  ### `_copy_library()` may be used to derive a new instance of the PiepStreams library to alter
+  ### `_copy_library()` may be used to derive a new instance of the PipeStreams library to alter
   configurations. ###
   CND.deep_copy @
 
