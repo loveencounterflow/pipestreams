@@ -353,9 +353,15 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 #
 #-----------------------------------------------------------------------------------------------------------
 @$pass        =                   -> map ( data ) => data
-@$drain       = ( on_end = null ) -> $pull_drain null, on_end
 @$end_if      = ( filter )        -> @$ ( d, send ) -> if (     filter d ) then send.end() else send d
 @$continue_if = ( filter )        -> @$ ( d, send ) -> if ( not filter d ) then send.end() else send d
+
+#-----------------------------------------------------------------------------------------------------------
+@$drain = ( on_end = null ) ->
+  return $pull_drain() unless on_end?
+  return $pull_drain null, ( error ) ->
+    throw error if error?
+    on_end()
 
 #-----------------------------------------------------------------------------------------------------------
 @new_pausable = -> ( require 'pull-pause' )()
