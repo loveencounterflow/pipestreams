@@ -11,11 +11,11 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
 @new_text_source = ( text ) -> $values [ text, ]
 
 # #-----------------------------------------------------------------------------------------------------------
-# @new_text_sink = -> throw new Error "µ8648 not implemented"
+# @new_text_sink = -> throw new Error "µ66539 not implemented"
 
 #-----------------------------------------------------------------------------------------------------------
 @$split = ( settings ) ->
-  throw new Error "µ26243 MEH" if settings?
+  throw new Error "µ66662 MEH" if settings?
   R         = []
   matcher   = null
   mapper    = null
@@ -40,12 +40,12 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
           when 'text'
             joiner ?= ''
           when 'buffer'
-            throw new Error "µ27008 joiner not supported for buffers, got #{rpr joiner}" if joiner?
+            throw new Error "µ66785 joiner not supported for buffers, got #{rpr joiner}" if joiner?
           else
-            throw new Error "µ27773 expected a text or a buffer, got a #{type}"
+            throw new Error "µ66908 expected a text or a buffer, got a #{type}"
       else
         unless ( this_type = CND.type_of data ) is type
-          throw new Error "µ28538 expected a #{type}, got a #{this_type}"
+          throw new Error "µ67031 expected a #{type}, got a #{this_type}"
       length += data.length
       collector.push data
     else
@@ -57,20 +57,26 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
 #-----------------------------------------------------------------------------------------------------------
 @$as_line = ->
   return @$map ( line ) =>
-    "µ839833 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
+    "µ67154 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
     line + '\n'
 
 #-----------------------------------------------------------------------------------------------------------
 @$trim = ->
   return @$map ( line ) =>
-    "µ839833 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
-    line.trim()
+    "µ67277 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
+    return line.trim()
 
 #-----------------------------------------------------------------------------------------------------------
 @$skip_empty = ->
   return @$filter ( line ) =>
-    "µ839833 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
-    line.length > 0
+    "µ67400 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
+    return line.length > 0
+
+#-----------------------------------------------------------------------------------------------------------
+@$skip_blank = ->
+  return @$filter ( line ) =>
+    "µ67523 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
+    return not ( line.match /^\s*$/ )?
 
 #-----------------------------------------------------------------------------------------------------------
 @$as_text = ( settings ) ->

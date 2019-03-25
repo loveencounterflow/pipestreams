@@ -1,0 +1,110 @@
+
+
+'use strict'
+
+
+############################################################################################################
+CND                       = require 'cnd'
+rpr                       = CND.rpr
+badge                     = 'PIPESTREAMS/TESTS/TSV'
+debug                     = CND.get_logger 'debug',     badge
+warn                      = CND.get_logger 'warn',      badge
+info                      = CND.get_logger 'info',      badge
+urge                      = CND.get_logger 'urge',      badge
+help                      = CND.get_logger 'help',      badge
+whisper                   = CND.get_logger 'whisper',   badge
+echo                      = CND.echo.bind CND
+#...........................................................................................................
+test                      = require 'guy-test'
+jr                        = JSON.stringify
+#...........................................................................................................
+PS                        = require '../..'
+{ $, $async, }            = PS
+
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "TSV 1" ] = ( T, done ) ->
+  probes_and_matchers = [
+    ["foo\tbar",[['foo','bar']],null]
+    [" foo \t bar ",[['foo','bar']],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, => new Promise ( resolve, reject ) =>
+      R         = []
+      pipeline  = []
+      pipeline.push PS.new_value_source probe
+      # pipeline.push PS.$split()
+      pipeline.push PS.$split_tsv()
+      pipeline.push PS.$collect { collector: R, }
+      pipeline.push PS.$show()
+      pipeline.push PS.$drain -> resolve R
+      PS.pull pipeline...
+      return null
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "WSV 1" ] = ( T, done ) ->
+  probes_and_matchers = [
+    ["foo bar",[['foo','bar']],null]
+    [" foo   bar ",[['foo','bar']],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, => new Promise ( resolve, reject ) =>
+      R         = []
+      pipeline  = []
+      pipeline.push PS.new_value_source probe
+      # pipeline.push PS.$split()
+      pipeline.push PS.$split_wsv()
+      pipeline.push PS.$collect { collector: R, }
+      pipeline.push PS.$show()
+      pipeline.push PS.$drain -> resolve R
+      PS.pull pipeline...
+      return null
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "WSV 2" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [["foo bar baz another field",null],[["foo","bar","baz","another","field"]],null]
+    [["foo bar baz another field",0],[["foo","bar","baz","another","field"]],null]
+    [["foo bar baz another field",1],[['foo bar baz another field']],null]
+    [["foo bar baz another field",2],[['foo','bar baz another field']],null]
+    [["foo bar baz another field",3],[['foo','bar','baz another field']],null]
+    [["foo bar baz another field",4],[['foo','bar','baz', 'another field']],null]
+    [["foo bar baz another field",5],[['foo','bar','baz', 'another', 'field']],null]
+    [["foo bar baz another field",6],[['foo','bar','baz', 'another', 'field',null]],null]
+    [["foo bar baz another field",7],[['foo','bar','baz', 'another', 'field',null,null]],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, => new Promise ( resolve, reject ) =>
+      [ text, field_count, ]  = probe
+      R                       = []
+      pipeline                = []
+      pipeline.push PS.new_value_source text, field_count
+      # pipeline.push PS.$split()
+      pipeline.push PS.$split_wsv field_count
+      pipeline.push PS.$collect { collector: R, }
+      pipeline.push PS.$show()
+      pipeline.push PS.$drain -> resolve R
+      PS.pull pipeline...
+      return null
+  done()
+  return null
+
+
+
+
+
+############################################################################################################
+unless module.parent?
+  # test @
+  # test @[ "selector keypatterns" ]
+  # test @[ "TSV 1" ]
+  test @[ "WSV 2" ]
+
+
