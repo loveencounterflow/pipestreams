@@ -48,7 +48,7 @@ PS                        = require '../..'
 @[ "WSV 1" ] = ( T, done ) ->
   probes_and_matchers = [
     ["foo bar",[['foo','bar']],null]
-    [" foo   bar ",[['foo','bar']],null]
+    [" foo   bar ",[[null,'foo','bar']],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
@@ -56,7 +56,7 @@ PS                        = require '../..'
       R         = []
       pipeline  = []
       pipeline.push PS.new_value_source probe
-      # pipeline.push PS.$split()
+      pipeline.push PS.$split()
       pipeline.push PS.$split_wsv()
       pipeline.push PS.$collect { collector: R, }
       pipeline.push PS.$show()
@@ -70,8 +70,16 @@ PS                        = require '../..'
 @[ "WSV 2" ] = ( T, done ) ->
   probes_and_matchers = [
     [["foo bar baz another field",null],[["foo","bar","baz","another","field"]],null]
-    [["foo bar baz another field",0],[["foo","bar","baz","another","field"]],null]
     [["foo bar baz another field",1],[['foo bar baz another field']],null]
+    [[" foo bar baz another field",6],[[null,'foo','bar','baz', 'another', 'field']],null]
+    [["foo",2],[['foo',null]],null]
+    [["foo",null],[['foo']],null]
+    [[" foo bar baz another field",null],[[null,'foo','bar','baz', 'another', 'field']],null]
+    [["foo  ",2],[['foo',null]],null]
+    [["foo  ",3],[['foo',null,null]],null]
+    [["foo  ",null],[['foo']],null]
+    [["foo bar baz another field",null],[['foo','bar','baz', 'another', 'field']],null]
+
     [["foo bar baz another field",2],[['foo','bar baz another field']],null]
     [["foo bar baz another field",3],[['foo','bar','baz another field']],null]
     [["foo bar baz another field",4],[['foo','bar','baz', 'another field']],null]
@@ -85,11 +93,11 @@ PS                        = require '../..'
       [ text, field_count, ]  = probe
       R                       = []
       pipeline                = []
-      pipeline.push PS.new_value_source text, field_count
+      pipeline.push PS.new_value_source [ text, ]
+      pipeline.push PS.$show title: 'µ45456'
       # pipeline.push PS.$split()
       pipeline.push PS.$split_wsv field_count
       pipeline.push PS.$collect { collector: R, }
-      pipeline.push PS.$show()
       pipeline.push PS.$drain -> resolve R
       PS.pull pipeline...
       return null
@@ -97,14 +105,12 @@ PS                        = require '../..'
   return null
 
 
-
-
-
 ############################################################################################################
 unless module.parent?
-  # test @
-  # test @[ "selector keypatterns" ]
+  test @
   # test @[ "TSV 1" ]
-  test @[ "WSV 2" ]
+  # test @[ "WSV 1" ]
+  # test @[ "WSV 2" ]
+
 
 
