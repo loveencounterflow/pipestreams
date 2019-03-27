@@ -17,9 +17,9 @@ echo                      = CND.echo.bind CND
 
 #-----------------------------------------------------------------------------------------------------------
 @$name_fields = ( names ) ->
-  throw new Error "µ27276 expected a list, got a #{type}" unless ( type = CND.type_of names ) is 'list'
+  throw new Error "µ43512 expected a list, got a #{type}" unless ( type = CND.type_of names ) is 'list'
   return @_map_errors ( fields ) =>
-    throw new Error "µ27597 expected a list, got a #{type}" unless ( type = CND.type_of fields ) is 'list'
+    throw new Error "µ43613 expected a list, got a #{type}" unless ( type = CND.type_of fields ) is 'list'
     R = {}
     for value, idx in fields
       name      = names[ idx ] ?= "field_#{idx}"
@@ -35,7 +35,7 @@ echo                      = CND.echo.bind CND
 # #-----------------------------------------------------------------------------------------------------------
 # @$split_on_whitespace = ( field_count = null ) ->
 #   if ( field_count is 0 )
-#     throw new Error "µ39883 field_count can not be zero"
+#     throw new Error "µ43714 field_count can not be zero"
 #   #.........................................................................................................
 #   ### If user requested null or zero fields, we can just split the line: ###
 #   if ( not field_count? ) # or ( field_count is 0 )
@@ -73,7 +73,7 @@ echo                      = CND.echo.bind CND
 @$split_on_whitespace = ( field_count = null ) ->
   #.........................................................................................................
   if ( field_count is 0 )
-    throw new Error "µ39883 field_count can not be zero"
+    throw new Error "µ43815 field_count can not be zero"
   #.........................................................................................................
   ### If called with field_count `null`, we can just split the line: ###
   if ( not field_count? )
@@ -102,7 +102,7 @@ echo                      = CND.echo.bind CND
     "µ27918 expected a text, got a #{type}" unless ( type = CND.type_of line ) is 'text'
     # debug 'µ78765-1', ( rpr pattern ), ( rpr line )
     if ( '\n' in line ) or not ( match = line.match pattern )?
-      throw new Error "illegal line: #{rpr line}"
+      throw new Error "µ43916 illegal line: #{rpr line}"
     match = [ match..., ]
     R     = []
     # debug 'µ78765-2', ( rpr pattern ), ( rpr line ), ( rpr match )
@@ -112,7 +112,7 @@ echo                      = CND.echo.bind CND
 
 #-----------------------------------------------------------------------------------------------------------
 @$trim_fields = -> @$watch ( fields  ) =>
-  throw new Error "µ28560 expected a list, got a #{type}" unless ( type = CND.type_of fields ) is 'list'
+  throw new Error "µ44017 expected a list, got a #{type}" unless ( type = CND.type_of fields ) is 'list'
   fields[ idx ] = field.trim() for field, idx in fields
   return null
 
@@ -133,6 +133,7 @@ echo                      = CND.echo.bind CND
 @$split_wsv = ( field_count = null ) ->
   R = []
   R.push @$split()
+  # R.push @$sample 1 / 20000
   # R.push @$trim()
   R.push @$skip_blank()
   ### TAINT use named method; allow to configure comment marker ###
