@@ -86,6 +86,9 @@ PS                        = require '../..'
     [["foo bar baz another field",5],[['foo','bar','baz', 'another', 'field']],null]
     [["foo bar baz another field",6],[['foo','bar','baz', 'another', 'field',null]],null]
     [["foo bar baz another field",7],[['foo','bar','baz', 'another', 'field',null,null]],null]
+
+    [["⺮ ⺮ [zhu2] /\"bamboo\" radical in Chinese characters (Kangxi radical 118)/\r",4],[["⺮","⺮","[zhu2]","/\"bamboo\" radical in Chinese characters (Kangxi radical 118)/"]],null]
+    [["% % [pa1] /percent (Tw)/\r",4],[["%","%","[pa1]","/percent (Tw)/"]],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
@@ -94,9 +97,9 @@ PS                        = require '../..'
       R                       = []
       pipeline                = []
       pipeline.push PS.new_value_source [ text, ]
-      pipeline.push PS.$show title: 'µ45456'
       # pipeline.push PS.$split()
       pipeline.push PS.$split_wsv field_count
+      pipeline.push PS.$show title: 'µ45456'
       pipeline.push PS.$collect { collector: R, }
       pipeline.push PS.$drain -> resolve R
       PS.pull pipeline...
@@ -107,10 +110,10 @@ PS                        = require '../..'
 
 ############################################################################################################
 unless module.parent?
-  test @
+  # test @
   # test @[ "TSV 1" ]
   # test @[ "WSV 1" ]
-  # test @[ "WSV 2" ]
+  test @[ "WSV 2" ]
 
 
 

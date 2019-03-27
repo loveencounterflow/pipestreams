@@ -23,6 +23,7 @@ $pull_utf8_decoder        = require 'pull-utf8-decoder'
   skip_last = yes
   R.push $pull_utf8_decoder()
   R.push $pull_split matcher, mapper, reverse, skip_last
+  R.push @$ ( line, send ) -> send line.replace /\r+$/g, ''
   return @pull R...
 
 #-----------------------------------------------------------------------------------------------------------
