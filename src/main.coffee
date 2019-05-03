@@ -18,7 +18,7 @@ echo                      = CND.echo.bind CND
 #...........................................................................................................
 PATH                      = require 'path'
 FS                        = require 'fs'
-CP                        = require 'child_process'
+# CP                        = require 'child_process'
 glob                      = require 'globby'
 #...........................................................................................................
 $pass_through             = require 'pull-stream/throughs/through'
