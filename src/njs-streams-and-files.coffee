@@ -7,7 +7,8 @@
 CND                       = require 'cnd'
 badge                     = 'PIPESTREAMS/NJS-STREAMS-AND-FILES'
 FS                        = require 'fs'
-STPS                      = require 'stream-to-pull-stream'
+TO_PULL_STREAM            = require 'stream-to-pull-stream'
+TO_NODE_STREAM            = require 'pull-stream-to-stream'
 defer                     = setImmediate
 
 
@@ -64,7 +65,7 @@ defer                     = setImmediate
     when 1 then null
     else throw new Error "µ9983 expected 1 argument, got #{arity}"
   #.........................................................................................................
-  return STPS.source stream, ( error ) -> finish error
+  return TO_PULL_STREAM.source stream, ( error ) -> finish error
 
 #-----------------------------------------------------------------------------------------------------------
 @write_to_nodejs_stream = ( stream, on_stop ) ->
@@ -96,5 +97,13 @@ defer                     = setImmediate
     return null
   #.........................................................................................................
   stream.on 'close', -> finish()
-  return STPS.sink stream, ( error ) -> finish error
+  return TO_PULL_STREAM.sink stream, ( error ) -> finish error
+
+#-----------------------------------------------------------------------------------------------------------
+@node_stream_from_source = ( source ) -> TO_NODE_STREAM.source source
+@node_stream_from_sink   = ( sink   ) -> TO_NODE_STREAM.sink   sink
+
+
+
+
 
