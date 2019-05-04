@@ -29,6 +29,7 @@
     "cnd": "^4.5.0",
     "get-source": "^1.0.27",
     "globby": "^9.0.0",
+    "lodash.flattendeep": "^4.4.0",
     "pull-cont": "^0.1.1",
     "pull-map-last": "^1.0.0",
     "pull-merge": "^1.0.4",

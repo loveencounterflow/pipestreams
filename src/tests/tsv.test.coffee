@@ -107,13 +107,39 @@ PS                        = require '../..'
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "name_fields" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[[42,108],[['foo','bar']]],[{foo:42,bar:108,}],null]
+    [[[42,108],['foo','bar']],[{foo:42,bar:108,}],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, => new Promise ( resolve, reject ) =>
+      [ values, names, ]  = probe
+      debug 'µ33443', probe
+      debug 'µ33443', values
+      debug 'µ33443', names
+      R                   = []
+      pipeline            = []
+      pipeline.push PS.new_value_source [ values, ]
+      pipeline.push PS.$show()
+      pipeline.push PS.$name_fields names...
+      pipeline.push PS.$collect { collector: R, }
+      pipeline.push PS.$drain -> resolve R
+      PS.pull pipeline...
+      return null
+  done()
+  return null
+
 
 ############################################################################################################
 unless module.parent?
   # test @
   # test @[ "TSV 1" ]
   # test @[ "WSV 1" ]
-  test @[ "WSV 2" ]
+  # test @[ "WSV 2" ]
+  test @[ "name_fields" ]
 
 
 

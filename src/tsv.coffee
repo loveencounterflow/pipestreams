@@ -14,17 +14,19 @@ urge                      = CND.get_logger 'urge',      badge
 help                      = CND.get_logger 'help',      badge
 whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
+#...........................................................................................................
+flatten                   = require 'lodash.flattendeep'
 
 #-----------------------------------------------------------------------------------------------------------
-@$name_fields = ( names ) ->
-  throw new Error "µ43512 expected a list, got a #{type}" unless ( type = CND.type_of names ) is 'list'
-  return @_map_errors ( fields ) =>
+@$name_fields = ( names... ) ->
+  names = flatten names
+  return @$ ( fields, send ) =>
     throw new Error "µ43613 expected a list, got a #{type}" unless ( type = CND.type_of fields ) is 'list'
     R = {}
     for value, idx in fields
       name      = names[ idx ] ?= "field_#{idx}"
       R[ name ] = value
-    return R
+    send R
 
 #-----------------------------------------------------------------------------------------------------------
 @$split_on_tabs = ( settings ) ->
