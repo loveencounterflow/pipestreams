@@ -520,8 +520,8 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
   probes_and_matchers = [
     [[false,[1,2,3,null,5]],[1,1,1,2,2,2,3,3,3,null,null,null,5,5,5],null]
     [[true,[1,2,3,null,5]],[1,1,1,2,2,2,3,3,3,null,null,null,5,5,5],null]
-    [[false,[1,2,3,"stop",25,30]],[1,1,1,2,2,2,3,3,3],null] #! expected result: [1,1,1,2,2,2,3,3,3,null,null,null]
-    [[true,[1,2,3,"stop",25,30]],[1,1,1,2,2,2,3,3,3],null] #! expected result: [1,1,1,2,2,2,3,3,3,null,null,null]
+    [[false,[1,2,3,"stop",25,30]],[1,1,1,2,2,2,3,3,3],null]
+    [[true,[1,2,3,"stop",25,30]],[1,1,1,2,2,2,3,3,3],null]
     [[false,[1,2,3,null,"stop",25,30]],[1,1,1,2,2,2,3,3,3,null,null,null],null]
     [[true,[1,2,3,null,"stop",25,30]],[1,1,1,2,2,2,3,3,3,null,null,null],null]
     [[false,[1,2,3,undefined,"stop",25,30]],[1,1,1,2,2,2,3,3,3,undefined,undefined,undefined,],null]
@@ -571,13 +571,40 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "$mark_position" ] = ( T, done ) ->
+  # through = require 'pull-through'
+  probes_and_matchers = [
+    [["a"],[{"first":true,"last":true,"value":"a"}],null]
+    [[],[],null]
+    [[1,2,3],[{"first":true,"last":false,"value":1},{"first":false,"last":false,"value":2},{"first":false,"last":true,"value":3}],null]
+    [["a","b"],[{"first":true,"last":false,"value":"a"},{"first":false,"last":true,"value":"b"}],null]
+    ]
+  #.........................................................................................................
+  collector = []
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
+      #.....................................................................................................
+      source      = PS.new_value_source probe
+      collector   = []
+      pipeline    = []
+      pipeline.push source
+      pipeline.push PS.$mark_position()
+      pipeline.push PS.$collect { collector, }
+      pipeline.push PS.$drain -> resolve collector
+      pull pipeline...
+  #.........................................................................................................
+  done()
+  return null
+
 ############################################################################################################
 unless module.parent?
   # include = []
   # @_prune()
   # @_main()
   # test @
-  test @[ "read file chunks" ]
+  # test @[ "read file chunks" ]
+  test @[ "$mark_position" ]
   # test @[ "remit with end detection 1" ]
   # test @[ "remit with end detection 2" ]
   # test @[ "$surround async" ]

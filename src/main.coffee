@@ -343,6 +343,27 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 
 
 #===========================================================================================================
+# MARK POSITION IN STREAM
+#-----------------------------------------------------------------------------------------------------------
+@$mark_position = ->
+  ### Turns values into objects `{ first, last, value, }` where `value` is the original value and `first`
+  and `last` are booleans that indicate position of value in the stream. ###
+  first     = settings?.first ? @_symbols.first
+  last      = settings?.last  ? @_symbols.last
+  first     = true
+  prv       = []
+  return @$ { last, }, ( d, send ) =>
+    if ( d is last ) and prv.length > 0
+      if prv.length > 0
+        send { first, last: true, value: prv.pop(), }
+      return null
+    if prv.length > 0
+      send { first, last: false, value: prv.pop(), }
+      first = false
+    prv.push d
+    return null
+
+#===========================================================================================================
 # ASYNC TRANSFORMS
 #-----------------------------------------------------------------------------------------------------------
 @$defer =         -> $paramap ( d, handler ) -> defer       -> handler null, d
