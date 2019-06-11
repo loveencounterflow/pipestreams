@@ -575,10 +575,10 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
 @[ "$mark_position" ] = ( T, done ) ->
   # through = require 'pull-through'
   probes_and_matchers = [
-    [["a"],[{"first":true,"last":true,"value":"a"}],null]
+    [["a"],[{"is_first":true,"is_last":true,"d":"a"}],null]
     [[],[],null]
-    [[1,2,3],[{"first":true,"last":false,"value":1},{"first":false,"last":false,"value":2},{"first":false,"last":true,"value":3}],null]
-    [["a","b"],[{"first":true,"last":false,"value":"a"},{"first":false,"last":true,"value":"b"}],null]
+    [[1,2,3],[{"is_first":true,"is_last":false,"d":1},{"is_first":false,"is_last":false,"d":2},{"is_first":false,"is_last":true,"d":3}],null]
+    [["a","b"],[{"is_first":true,"is_last":false,"d":"a"},{"is_first":false,"is_last":true,"d":"b"}],null]
     ]
   #.........................................................................................................
   collector = []

@@ -348,18 +348,17 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 @$mark_position = ->
   ### Turns values into objects `{ first, last, value, }` where `value` is the original value and `first`
   and `last` are booleans that indicate position of value in the stream. ###
-  first     = settings?.first ? @_symbols.first
-  last      = settings?.last  ? @_symbols.last
-  first     = true
+  last      = @_symbols.last
+  is_first  = true
   prv       = []
   return @$ { last, }, ( d, send ) =>
     if ( d is last ) and prv.length > 0
       if prv.length > 0
-        send { first, last: true, value: prv.pop(), }
+        send { is_first, is_last: true, d: prv.pop(), }
       return null
     if prv.length > 0
-      send { first, last: false, value: prv.pop(), }
-      first = false
+      send { is_first, is_last: false, d: prv.pop(), }
+      is_first = false
     prv.push d
     return null
 
