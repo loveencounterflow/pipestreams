@@ -40,6 +40,13 @@ return_id                 = ( x ) -> x
   jr }                    = CND
 #...........................................................................................................
 @_symbols                 = require './_symbols'
+#...........................................................................................................
+types                     = require './_types'
+{ isa
+  validate
+  declare
+  size_of
+  type_of }               = types
 
 
 #===========================================================================================================
@@ -370,7 +377,9 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 # WINDOWING
 #-----------------------------------------------------------------------------------------------------------
 @$window = ( settings ) ->
-  # validate.pipestreams_$window_settings settings
+  defaults  = { width: 3, }
+  settings  = assign {}, defaults, settings
+  validate.pipestreams_$window_settings settings
   if settings.width is 1
     return @$ ( d, send ) => send [ d, ]
   #.........................................................................................................

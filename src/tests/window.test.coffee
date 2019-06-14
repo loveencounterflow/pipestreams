@@ -20,24 +20,6 @@ echo                      = CND.echo.bind CND
 test                      = require 'guy-test'
 PS                        = require '../..'
 
-# INTERTYPE                 = require '../..'
-# { Intertype, }            = INTERTYPE
-# { assign
-#   jr
-#   flatten
-#   xrpr
-#   js_type_of }            = require '../helpers'
-
-  # intertype = new Intertype
-  # { isa
-  #   validate
-  #   type_of
-  #   types_of
-  #   size_of
-  #   declare
-  #   all_keys_of } = intertype.export()
-
-
 #-----------------------------------------------------------------------------------------------------------
 @[ "window" ] = ( T, done ) ->
   #.........................................................................................................
@@ -55,6 +37,7 @@ PS                        = require '../..'
     [[[],2],[],null]
     [[[],3],[],null]
     [[[],4],[],null]
+    [[[1,2,3],0],[],'not a valid pipestreams_\\$window_settings']
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
