@@ -367,6 +367,31 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 
 
 #===========================================================================================================
+# WINDOWING
+#-----------------------------------------------------------------------------------------------------------
+@$window = ( settings ) ->
+  # validate.pipestreams_$window_settings settings
+  if settings.width is 1
+    return @$ ( d, send ) => send [ d, ]
+  #.........................................................................................................
+  last      = Symbol 'last'
+  had_value = false
+  buffer    = ( null for _ in [ 1 .. settings.width ] )
+  return @$ { last, }, ( d, send ) =>
+    if d is last
+      if had_value
+        for _ in [ 1 ... buffer.length ]
+          buffer.shift()
+          buffer.push null
+          send buffer[ .. ]
+      return null
+    had_value = true
+    buffer.shift()
+    buffer.push d
+    send buffer[ .. ]
+    return null
+
+#===========================================================================================================
 # ASYNC TRANSFORMS
 #-----------------------------------------------------------------------------------------------------------
 @$defer =         -> $paramap ( d, handler ) -> defer       -> handler null, d
