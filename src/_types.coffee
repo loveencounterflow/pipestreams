@@ -25,4 +25,10 @@ intertype                 = new Intertype module.exports
     "x is an object":                         ( x ) -> @isa.object x
     "x.width is a positive":                  ( x ) -> @isa.positive x.width
 
+#-----------------------------------------------------------------------------------------------------------
+@declare 'pipestreams_$lookaround_settings',
+  tests:
+    "x is an object":                         ( x ) -> @isa.object x
+    "x.delta is a count":                     ( x ) -> @isa.count x.delta
+
 

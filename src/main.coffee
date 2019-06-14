@@ -377,7 +377,9 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 # WINDOWING
 #-----------------------------------------------------------------------------------------------------------
 @$window = ( settings ) ->
-  defaults  = { width: 3, }
+  ### Moving window over data items in stream. Turns stream of values into stream of
+  lists each `width` elements long. ###
+  defaults  = { width: 3, fallback: null, }
   settings  = assign {}, defaults, settings
   validate.pipestreams_$window_settings settings
   if settings.width is 1
@@ -385,13 +387,14 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
   #.........................................................................................................
   last      = Symbol 'last'
   had_value = false
-  buffer    = ( null for _ in [ 1 .. settings.width ] )
+  fallback  = settings.fallback
+  buffer    = ( fallback for _ in [ 1 .. settings.width ] )
   return @$ { last, }, ( d, send ) =>
     if d is last
       if had_value
-        for _ in [ 1 ... buffer.length ]
+        for _ in [ 1 ... settings.width ]
           buffer.shift()
-          buffer.push null
+          buffer.push fallback
           send buffer[ .. ]
       return null
     had_value = true
@@ -399,6 +402,57 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
     buffer.push d
     send buffer[ .. ]
     return null
+
+#-----------------------------------------------------------------------------------------------------------
+@$lookaround = ( settings ) ->
+  ### Turns stream of values into stream of lists of values, each `( 2 * delta ) + 1` elements long;
+  unlike `$window()`, will send exactly as many lists as there are values in the stream. Default
+  is `delta: 1`, i.e. you get to see lists `[ prv, d, nxt, ]` where `prv` is the previous value
+  (or the fallback which itself defaults to `null`), `d` is the current value, and `nxt` is the
+  upcoming value (or `fallback` in case the stream will end after this value). ###
+  defaults  = { delta: 1, fallback: null, }
+  settings  = assign {}, defaults, settings
+  validate.pipestreams_$lookaround_settings settings
+  if settings.delta is 0
+    return @$ ( d, send ) => send [ d, ]
+  #.........................................................................................................
+  fallback  = settings.fallback
+  misfit    = Symbol 'misfit'
+  delta     = center = settings.delta
+  pipeline  = []
+  pipeline.push @$window { width: ( 2 * delta + 1 ), fallback: misfit, }
+  pipeline.push @$ ( d, send ) =>
+    # debug 'µ11121', rpr d
+    # debug 'µ11121', rpr ( ( if x is misfit then fallback else x ) for x in d )
+    return null if d[ center ] is misfit
+    send ( ( if x is misfit then fallback else x ) for x in d )
+    return null
+  return @pull pipeline...
+
+#-----------------------------------------------------------------------------------------------------------
+@window = ( settings, transform ) ->
+  switch arity = arguments.length
+    when 1
+      [ settings, transform, ] = [ null, settings, ]
+    when 2 then null
+    else throw new Error "µ23111 expected 1 or 2 arguments, got #{arity}"
+  pipeline = []
+  pipeline.push @$window settings
+  pipeline.push transform
+  @pull pipeline...
+
+#-----------------------------------------------------------------------------------------------------------
+@lookaround = ( settings, transform ) ->
+  switch arity = arguments.length
+    when 1
+      [ settings, transform, ] = [ null, settings, ]
+    when 2 then null
+    else throw new Error "µ23112 expected 1 or 2 arguments, got #{arity}"
+  pipeline = []
+  pipeline.push @$lookaround settings
+  pipeline.push transform
+  @pull pipeline...
+
 
 #===========================================================================================================
 # ASYNC TRANSFORMS

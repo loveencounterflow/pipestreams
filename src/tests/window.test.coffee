@@ -21,35 +21,71 @@ test                      = require 'guy-test'
 PS                        = require '../..'
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "window" ] = ( T, done ) ->
+@[ "$window" ] = ( T, done ) ->
   #.........................................................................................................
   probes_and_matchers = [
-    [[[1,2,3,4],1],[[1],[2],[3],[4]],null]
-    [[[1,2,3,4],2],[[null,1],[1,2],[2,3],[3,4],[4,null]],null]
-    [[[1,2,3,4],3],[[null,null,1],[null,1,2],[1,2,3],[2,3,4],[3,4,null],[4,null,null]],null]
-    [[[1,2,3,4],4],[[null,null,null,1],[null,null,1,2],[null,1,2,3],[1,2,3,4],[2,3,4,null],[3,4,null,null],[4,null,null,null]],null]
-    [[[1,2,3,4],5],[[null,null,null,null,1],[null,null,null,1,2],[null,null,1,2,3],[null,1,2,3,4],[1,2,3,4,null],[2,3,4,null,null],[3,4,null,null,null],[4,null,null,null,null]],null]
-    [[[1],1],[[1]],null]
-    [[[1],2],[[null,1],[1,null]],null]
-    [[[1],3],[[null,null,1],[null,1,null],[1,null,null]],null]
-    [[[1],4],[[null,null,null,1],[null,null,1,null],[null,1,null,null],[1,null,null,null]],null]
-    [[[],1],[],null]
-    [[[],2],[],null]
-    [[[],3],[],null]
-    [[[],4],[],null]
-    [[[1,2,3],0],[],'not a valid pipestreams_\\$window_settings']
+    [[[1,2,3,4],1,null],[[1],[2],[3],[4]],null]
+    [[[1,2,3,4],2,null],[[null,1],[1,2],[2,3],[3,4],[4,null]],null]
+    [[[1,2,3,4],3,null],[[null,null,1],[null,1,2],[1,2,3],[2,3,4],[3,4,null],[4,null,null]],null]
+    [[[1,2,3,4],4,null],[[null,null,null,1],[null,null,1,2],[null,1,2,3],[1,2,3,4],[2,3,4,null],[3,4,null,null],[4,null,null,null]],null]
+    [[[1,2,3,4],5,null],[[null,null,null,null,1],[null,null,null,1,2],[null,null,1,2,3],[null,1,2,3,4],[1,2,3,4,null],[2,3,4,null,null],[3,4,null,null,null],[4,null,null,null,null]],null]
+    [[[1],1,null],[[1]],null]
+    [[[1],2,null],[[null,1],[1,null]],null]
+    [[[1],3,null],[[null,null,1],[null,1,null],[1,null,null]],null]
+    [[[1],4,null],[[null,null,null,1],[null,null,1,null],[null,1,null,null],[1,null,null,null]],null]
+    [[[],1,null],[],null]
+    [[[],2,null],[],null]
+    [[[],3,null],[],null]
+    [[[],4,null],[],null]
+    [[[1,2,3],0,null],[],'not a valid pipestreams_\\$window_settings']
+    [[[1],2,'novalue'],[['novalue',1],[1,'novalue']],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
       [ values
-        width ] = probe
-      source    = PS.new_value_source values
-      collector = []
-      pipeline  = []
+        width
+        fallback ]  = probe
+      source        = PS.new_value_source values
+      collector     = []
+      pipeline      = []
       pipeline.push source
-      pipeline.push PS.$window { width, }
+      pipeline.push PS.$window { width, fallback, }
       # pipeline.push PS.$show()
+      pipeline.push PS.$collect { collector, }
+      pipeline.push PS.$drain -> resolve collector
+      PS.pull pipeline...
+      return null
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "$lookaround" ] = ( T, done ) ->
+  #.........................................................................................................
+  probes_and_matchers = [
+    [[[1,2,3,4],0,null],[[1],[2],[3],[4]],null]
+    [[[1,2,3,4],1,null],[[null,1,2],[1,2,3],[2,3,4],[3,4,null]],null]
+    [[[1,2,3,4],2,null],[[null,null,1,2,3],[null,1,2,3,4],[1,2,3,4,null],[2,3,4,null,null]],null]
+    [[[1],1,null],[[null,1,null]],null]
+    [[[],1,null],[],null]
+    [[[],2,null],[],null]
+    [[[],3,null],[],null]
+    [[[],4,null],[],null]
+    [[[1,2,3],-1],[],'not a valid pipestreams_\\$lookaround_settings']
+    [[[1],1,42],[[42,1,42]],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      [ values
+        delta
+        fallback ]  = probe
+      source        = PS.new_value_source values
+      collector     = []
+      pipeline      = []
+      pipeline.push source
+      pipeline.push PS.$lookaround { delta, fallback, }
+      pipeline.push PS.$show()
       pipeline.push PS.$collect { collector, }
       pipeline.push PS.$drain -> resolve collector
       PS.pull pipeline...
@@ -62,8 +98,9 @@ PS                        = require '../..'
 
 ############################################################################################################
 unless module.parent?
-  test @
-  # test @[ "vnr, int32" ]
+  # test @
+  # test @[ "$window" ]
+  test @[ "$lookaround" ]
   # test @[ "cast" ]
   # test @[ "isa.list_of A" ]
   # test @[ "isa.list_of B" ]
