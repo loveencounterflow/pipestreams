@@ -564,10 +564,63 @@ new_filtered_bysink = ( name, collector, filter ) ->
   return null
 
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "leapfrog 1" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [ [ [ 1 .. 12 ], ( ( d ) -> ( d % 3 ) isnt 0 ), ], [1,2,4,5,[null,3,6],7,8,[3,6,9],10,11,[6,9,12],[9,12,null]],                           null, ]
+    [ [ [ 1 .. 12 ], ( ( d ) -> ( d % 3 ) is   0 ), ], [[null,1,2],3,[1,2,4],[2,4,5],6,[4,5,7],[5,7,8],9,[7,8,10],[8,10,11],12,[10,11,null]], null, ]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    #.......................................................................................................
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      [ values
+        tester ]  = probe
+      collector   = []
+      pipeline    = []
+      pipeline.push PS.new_value_source values
+      pipeline.push PS.leapfrog tester, PS.lookaround $ ( d3, send ) ->
+        [ prv, d, nxt, ]  = d3
+        send d3
+      pipeline.push PS.$collect { collector, }
+      pipeline.push PS.$drain -> resolve collector
+      PS.pull pipeline...
+      #.....................................................................................................
+      return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "leapfrog 2" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [ [ [ 1 .. 12 ], ( ( d ) -> ( d % 3 ) isnt 0 ), ], [1,2,300,4,5,600,7,8,900,10,11,1200],         null, ]
+    [ [ [ 1 .. 12 ], ( ( d ) -> ( d % 3 ) is   0 ), ], [100,200,3,400,500,6,700,800,9,1000,1100,12], null, ]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    #.......................................................................................................
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      [ values
+        tester ]  = probe
+      collector   = []
+      pipeline    = []
+      pipeline.push PS.new_value_source values
+      pipeline.push PS.leapfrog tester, $ ( d, send ) -> send d * 100
+      pipeline.push PS.$collect { collector, }
+      pipeline.push PS.$drain -> resolve collector
+      PS.pull pipeline...
+      #.....................................................................................................
+      return null
+  #.........................................................................................................
+  done()
+  return null
+
 ############################################################################################################
 unless module.parent?
-  test @, { timeout: 5000, }
-  # test @[ "wye with duplex pair"            ]
+  # test @, { timeout: 5000, }
+  # test @[ "leapfrog 1" ]
+  test @[ "leapfrog 2" ]
   # test @[ "new_merged_source 1"             ]
   # test @[ "$wye 1"                          ]
   # test @[ "$wye 2"                          ]

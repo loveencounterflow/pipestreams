@@ -86,17 +86,16 @@ assign                    = Object.assign
   were. Downstream transforms will still receive all data items, including the leapfrogging ones, but the
   stream as it is visible to the `transform` will be thinned out. ###
   #.........................................................................................................
+  last      = Symbol 'last'
   bysource  = @new_push_source()
-  byline    = []
-  byline.push bysource
-  #.........................................................................................................
   pipeline  = []
-  pipeline.push $ ( d, send ) ->
+  pipeline.push @$defer()
+  pipeline.push @$ { last, }, ( d, send ) ->
+    return bysource.end() if d is last
     if ( test d ) then  bysource.send d
     else                send d
   pipeline.push transform
-  pipeline.push @$wye @pull byline...
-  byline.push @$pass()
+  pipeline.push @$wye bysource
   #.........................................................................................................
   return @pull pipeline...
 
