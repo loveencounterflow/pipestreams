@@ -431,7 +431,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
   byline starts with a wye whose refillable source is used to implement the
   loop. Observe that a wye cannot come first in  pipeline, so we put a `$pass()`
   transform first to satisfy that requirement. The transform will accept texts
-  and pas them with as many stars as needed, one at a time, until the text's
+  and pass them with as many stars as needed, one at a time, until the text's
   length is at least 5 characters. Hence, each incoming text may loop for a
   number of times: a 4-character text gets an additional `*` and doesn't loop at
   all, a single-character text gets one star and is the sent back into the

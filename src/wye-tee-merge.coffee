@@ -78,3 +78,27 @@ assign                    = Object.assign
   serverline.push server
   @pull serverline...
   return client
+
+#-----------------------------------------------------------------------------------------------------------
+@leapfrog = ( test, transform ) ->
+  ### Given a `test` function (which accepts a single argument) and a `transform`, make it so that whenever
+  `test d` returns `true`, data `d` will be taken out of the stream and 'jump over' the transform, as it
+  were. Downstream transforms will still receive all data items, including the leapfrogging ones, but the
+  stream as it is visible to the `transform` will be thinned out. ###
+  #.........................................................................................................
+  bysource  = @new_push_source()
+  byline    = []
+  byline.push bysource
+  #.........................................................................................................
+  pipeline  = []
+  pipeline.push $ ( d, send ) ->
+    if ( test d ) then  bysource.send d
+    else                send d
+  pipeline.push transform
+  pipeline.push @$wye @pull byline...
+  byline.push @$pass()
+  #.........................................................................................................
+  return @pull pipeline...
+
+
+
