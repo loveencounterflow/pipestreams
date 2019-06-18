@@ -8,7 +8,8 @@ CND                       = require 'cnd'
 badge                     = 'PIPESTREAMS/NJS-STREAMS-AND-FILES'
 FS                        = require 'fs'
 TO_PULL_STREAM            = require 'stream-to-pull-stream'
-TO_NODE_STREAM            = require 'pull-stream-to-stream'
+TO_NODE_STREAM            = require '../deps/pull-stream-to-stream-patched'
+# TO_NODE_STREAM            = require 'pull-stream-to-stream'
 defer                     = setImmediate
 
 
