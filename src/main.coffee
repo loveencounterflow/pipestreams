@@ -247,6 +247,13 @@ types                     = require './_types'
   throw new Error "µ20888 expected a function, got a #{type}" unless ( type = CND.type_of method ) is 'function'
   #.........................................................................................................
   self          = null
+  #.........................................................................................................
+  if settings.leapfrog?
+    validate.function settings.leapfrog
+    do_leapfrog = true
+  else
+    do_leapfrog = false
+  #.........................................................................................................
   data_first    = settings.first
   data_before   = settings.before
   data_between  = settings.between
@@ -277,7 +284,11 @@ types                     = require './_types'
     else
       method data_between, send if send_between
     method data_before, send  if send_before
-    method d,           send
+    #.......................................................................................................
+    # When leapfrogging is being called for, only call method if the jumper returns false:
+    if ( not do_leapfrog ) or ( not settings.leapfrog d ) then  method d, send
+    else                                                        send d
+    #.......................................................................................................
     method data_after,  send  if send_after
     self = null
     return null
