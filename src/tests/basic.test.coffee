@@ -597,6 +597,56 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "leapfrog 1" ] = ( T, done ) ->
+  # through = require 'pull-through'
+  probes_and_matchers = [
+    [[[ 1 .. 10], ( ( d ) -> d %% 2 isnt 0 ), ],[1,102,3,104,5,106,7,108,9,110],null]
+    ]
+  #.........................................................................................................
+  collector = []
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
+      [ values
+        jumper ]  = probe
+      #.....................................................................................................
+      source      = PS.new_value_source values
+      collector   = []
+      pipeline    = []
+      pipeline.push source
+      pipeline.push PS.$ { leapfrog: jumper, }, ( d, send ) -> send 100 + d
+      pipeline.push PS.$collect { collector, }
+      pipeline.push PS.$drain -> resolve collector
+      pull pipeline...
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "leapfrog 2" ] = ( T, done ) ->
+  # through = require 'pull-through'
+  probes_and_matchers = [
+    [[[ 1 .. 10], ( ( d ) -> d %% 2 isnt 0 ), ],[1,102,3,104,5,106,7,108,9,110],null]
+    ]
+  #.........................................................................................................
+  collector = []
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, -> new Promise ( resolve ) ->
+      [ values
+        jumper ]  = probe
+      #.....................................................................................................
+      source      = PS.new_value_source values
+      collector   = []
+      pipeline    = []
+      pipeline.push source
+      pipeline.push PS.$ { leapfrog: jumper, }, ( d, send ) -> send 100 + d
+      pipeline.push PS.$collect { collector, }
+      pipeline.push PS.$drain -> resolve collector
+      pull pipeline...
+  #.........................................................................................................
+  done()
+  return null
+
 ############################################################################################################
 unless module.parent?
   # include = []
@@ -604,7 +654,8 @@ unless module.parent?
   # @_main()
   # test @
   # test @[ "read file chunks" ]
-  test @[ "$mark_position" ]
+  # test @[ "$mark_position" ]
+  test @[ "leapfrog 2" ]
   # test @[ "remit with end detection 1" ]
   # test @[ "remit with end detection 2" ]
   # test @[ "$surround async" ]
