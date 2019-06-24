@@ -19,6 +19,9 @@ echo                      = CND.echo.bind CND
 #...........................................................................................................
 test                      = require 'guy-test'
 PS                        = require '../..'
+{ $
+  $async }                = PS
+
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "$window" ] = ( T, done ) ->
@@ -60,7 +63,7 @@ PS                        = require '../..'
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "$window with leapfrogging" ] = ( T, done ) ->
+@[ "window with leapfrogging" ] = ( T, done ) ->
   #.........................................................................................................
   probes_and_matchers = [
     [[[1,2,3,4],1,null],[1,[2],3,[4]],null]
@@ -92,8 +95,10 @@ PS                        = require '../..'
       pipeline      = []
       jumper        = ( d ) -> d %% 2 is 1
       pipeline.push source
-      pipeline.push PS.$window { width, fallback, leapfrog: jumper, }
-      # pipeline.push PS.$show()
+      pipeline.push PS.window { width, fallback, leapfrog: jumper, }, $ ( dx, send ) ->
+        debug 'µ44772', dx
+        send dx
+      pipeline.push PS.$show()
       pipeline.push PS.$collect { collector, }
       pipeline.push PS.$drain -> resolve collector
       PS.pull pipeline...
@@ -140,10 +145,10 @@ PS                        = require '../..'
 
 ############################################################################################################
 unless module.parent?
-  # test @
+  test @
   # test @[ "$window" ]
   # test @[ "$lookaround" ]
-  test @[ "$window with leapfrogging" ]
+  # test @[ "window with leapfrogging" ]
   # test @[ "cast" ]
   # test @[ "isa.list_of A" ]
   # test @[ "isa.list_of B" ]

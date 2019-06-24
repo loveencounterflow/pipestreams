@@ -393,19 +393,19 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
   defaults                = { width: 3, fallback: null, }
   settings                = assign {}, defaults, settings
   validate.pipestreams_$window_settings settings
+  #.........................................................................................................
+  if settings.leapfrog?
+    throw new Error "µ77871 setting 'leapfrog' only valid for PS.window(), not PS.$window()"
+  #.........................................................................................................
   if settings.width is 1
-    if settings.leapfrog?
-      return @$ { leapfrog: settings.leapfrog, }, ( d, send ) => send [ d, ]
     return @$ ( d, send ) => send [ d, ]
   #.........................................................................................................
   last                    = Symbol 'last'
   had_value               = false
   fallback                = settings.fallback
   buffer                  = ( fallback for _ in [ 1 .. settings.width ] )
-  remit_settings          = { last, }
-  remit_settings.leapfrog = settings.leapfrog if settings.leapfrog?
   #.........................................................................................................
-  return @$ remit_settings, ( d, send ) =>
+  return @$ { last, }, ( d, send ) =>
     if d is last
       if had_value
         for _ in [ 1 ... settings.width ]
@@ -429,6 +429,10 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
   defaults  = { delta: 1, fallback: null, }
   settings  = assign {}, defaults, settings
   validate.pipestreams_$lookaround_settings settings
+  #.........................................................................................................
+  if settings.leapfrog?
+    throw new Error "µ77872 setting 'leapfrog' only valid for PS.lookaround(), not PS.$lookaround()"
+  #.........................................................................................................
   if settings.delta is 0
     return @$ ( d, send ) => send [ d, ]
   #.........................................................................................................
@@ -444,6 +448,8 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
     send ( ( if x is misfit then fallback else x ) for x in d )
     return null
   return @pull pipeline...
+  #.........................................................................................................
+  return R
 
 #-----------------------------------------------------------------------------------------------------------
 @window = ( settings, transform ) ->
@@ -452,10 +458,19 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
       [ settings, transform, ] = [ null, settings, ]
     when 2 then null
     else throw new Error "µ23111 expected 1 or 2 arguments, got #{arity}"
+  #.........................................................................................................
+  if ( leapfrog = settings?.leapfrog )?
+    delete settings.leapfrog
+  #.........................................................................................................
   pipeline = []
   pipeline.push @$window settings
   pipeline.push transform
-  @pull pipeline...
+  R = @pull pipeline...
+  #.........................................................................................................
+  if leapfrog?
+    return @leapfrog leapfrog, R
+  #.........................................................................................................
+  return R
 
 #-----------------------------------------------------------------------------------------------------------
 @lookaround = ( settings, transform ) ->
@@ -464,10 +479,19 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
       [ settings, transform, ] = [ null, settings, ]
     when 2 then null
     else throw new Error "µ23112 expected 1 or 2 arguments, got #{arity}"
+  #.........................................................................................................
+  if ( leapfrog = settings?.leapfrog )?
+    delete settings.leapfrog
+  #.........................................................................................................
   pipeline = []
   pipeline.push @$lookaround settings
   pipeline.push transform
-  @pull pipeline...
+  R = @pull pipeline...
+  #.........................................................................................................
+  if leapfrog?
+    return @leapfrog leapfrog, R
+  #.........................................................................................................
+  return R
 
 
 #===========================================================================================================

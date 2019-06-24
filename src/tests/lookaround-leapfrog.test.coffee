@@ -60,6 +60,37 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
   return null
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "1 leapfrog lookaround with groups 2" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [ [ [ 1 .. 12 ], ( ( d ) -> ( d % 3 ) isnt 0 ), ], [1,2,4,5,[null,3,6],7,8,[3,6,9],10,11,[6,9,12],[9,12,null]],                           null, ]
+    [ [ [ 1 .. 12 ], ( ( d ) -> ( d % 3 ) is   0 ), ], [[null,1,2],3,[1,2,4],[2,4,5],6,[4,5,7],[5,7,8],9,[7,8,10],[8,10,11],12,[10,11,null]], null, ]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    #.......................................................................................................
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      [ values
+        tester ]  = probe
+      collector   = []
+      pipeline    = []
+      pipeline.push PS.new_value_source values
+      pipeline.push PS.$show { title: 'µ33421-1', }
+      # pipeline.push PS.leapfrog tester, PS.lookaround $ ( d3, send ) ->
+      pipeline.push PS.lookaround { leapfrog: tester, }, $ ( d3, send ) ->
+        debug 'µ43443', jr d3
+        [ prv, d, nxt, ] = d3
+        send d3
+      pipeline.push PS.$show { title: 'µ33421-2', }
+      pipeline.push PS.$collect { collector, }
+      pipeline.push PS.$drain -> resolve collector
+      PS.pull pipeline...
+      #.....................................................................................................
+      return null
+  #.........................................................................................................
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
 ### TAINT ordering not preserved ###
 @[ "_____________ 2 leapfrog lookaround ungrouped" ] = ( T, done ) ->
   probes_and_matchers = [
@@ -174,8 +205,9 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
 
 ############################################################################################################
 unless module.parent?
-  test @
+  # test @
   # test @[ "1 leapfrog lookaround with groups" ]
+  test @[ "1 leapfrog lookaround with groups 2" ]
   # test @[ "2 leapfrog lookaround ungrouped" ]
   # test @[ "3 lookaround" ]
   # test @[ "4 leapfrog" ]
