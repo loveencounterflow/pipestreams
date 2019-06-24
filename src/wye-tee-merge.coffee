@@ -90,10 +90,24 @@ assign                    = Object.assign
   bysource  = @new_push_source()
   pipeline  = []
   pipeline.push @$defer()
+  # pipeline.push @$async { last, }, ( d, send, done ) ->
+  #   if d is last
+  #     bysource.end()
+  #     done()
+  #   else if ( test d )
+  #     # defer ->
+  #     bysource.send d
+  #     done()
+  #   else
+  #     # defer ->
+  #       send d
+  #       done()
+  #   return null
   pipeline.push @$ { last, }, ( d, send ) ->
-    return bysource.end() if d is last
-    if ( test d ) then  bysource.send d
-    else                send d
+    if d is last        then  bysource.end()
+    else if ( test d )  then  bysource.send d
+    else                      send d
+    return null
   pipeline.push transform
   pipeline.push @$wye bysource
   #.........................................................................................................
