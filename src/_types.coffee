@@ -32,3 +32,8 @@ intertype                 = new Intertype module.exports
     "x.delta is a count":                     ( x ) -> @isa.count x.delta
 
 
+#-----------------------------------------------------------------------------------------------------------
+@declare 'positive_proper_fraction',          ( x ) -> 0 <= x <= 1
+@declare 'pipestreams_number_or_text',        ( x ) -> ( @isa.number x ) or ( @isa.text x )
+
+
