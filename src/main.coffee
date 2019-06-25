@@ -584,25 +584,58 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 #===========================================================================================================
 # SAMPLING / THINNING OUT
 #-----------------------------------------------------------------------------------------------------------
-@$sample = ( p = 0.5, options ) ->
+@$sample = ( p = 0.5, settings ) ->
+  validate.positive_proper_fraction p
   #.........................................................................................................
-  unless 0 <= p <= 1
-    throw new Error "µ42308 expected a number between 0 and 1, got #{rpr p}"
+  return ( @$map    ( d ) => d      ) if p is 1
+  return ( @$filter ( d ) => false  ) if p is 0
   #.........................................................................................................
-  ### Handle trivial edge cases faster (hopefully): ###
-  return ( @$map    ( record ) => record  ) if p == 1
-  return ( @$filter ( record ) => false   ) if p == 0
-  #.........................................................................................................
-  headers   = options?[ 'headers'     ] ? false
-  seed      = options?[ 'seed'        ] ? null
+  headers   = settings?[ 'headers'     ] ? false
+  seed      = settings?[ 'seed'        ] ? null
   is_first  = headers
   rnd       = if seed? then CND.get_rnd seed else Math.random
   #.........................................................................................................
-  return @$ ( record, send ) =>
+  return @$ ( d, send ) =>
     if is_first
       is_first = false
-      return send record
-    send record if rnd() < p
+      return send d
+    send d if rnd() < p
+
+#-----------------------------------------------------------------------------------------------------------
+@$scramble = ( p = 0.5, settings ) ->
+  validate.positive_proper_fraction p
+  #.........................................................................................................
+  return @$pass() if p is 0
+  #.........................................................................................................
+  headers   = settings?[ 'headers'     ] ? false
+  seed      = settings?[ 'seed'        ] ? null
+  is_first  = headers
+  rnd       = if seed? then CND.get_rnd seed else Math.random
+  last      = Symbol 'last'
+  cache     = []
+  send      = null
+  shuffle   = if seed? then ( CND.get_shuffle seed, seed ) else ( CND.shuffle.bind CND )
+  #.........................................................................................................
+  flush = ->
+    shuffle cache
+    send cache.pop() while cache.length > 0
+    cache.length = 0
+    return null
+  #.........................................................................................................
+  return @$ { last, }, ( d, send_ ) =>
+    send = send_
+    return flush() if d is last
+    #.......................................................................................................
+    if is_first
+      is_first = false
+      return send d
+    #.......................................................................................................
+    if rnd() >= p
+      cache.push d
+      return flush()
+    #.......................................................................................................
+    cache.push d
+    return null
 
 
 #===========================================================================================================
