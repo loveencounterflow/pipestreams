@@ -74,13 +74,13 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
       collector   = []
       pipeline    = []
       pipeline.push PS.new_value_source values
-      pipeline.push PS.$show { title: 'µ33421-1', }
+      # pipeline.push PS.$show { title: 'µ33421-1', }
       # pipeline.push PS.leapfrog tester, PS.lookaround $ ( d3, send ) ->
       pipeline.push PS.lookaround { leapfrog: tester, }, $ ( d3, send ) ->
-        debug 'µ43443', jr d3
+        # debug 'µ43443', jr d3
         [ prv, d, nxt, ] = d3
         send d3
-      pipeline.push PS.$show { title: 'µ33421-2', }
+      # pipeline.push PS.$show { title: 'µ33421-2', }
       pipeline.push PS.$collect { collector, }
       pipeline.push PS.$drain -> resolve collector
       PS.pull pipeline...
