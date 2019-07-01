@@ -507,13 +507,17 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 @$pass        =                   -> map ( data ) => data
 @$end_if      = ( filter )        -> @$ ( d, send ) -> if (     filter d ) then send.end() else send d
 @$continue_if = ( filter )        -> @$ ( d, send ) -> if ( not filter d ) then send.end() else send d
+@mark_as_sink = ( method )        -> method[ Symbol.for 'sink' ] = true; return method
 
 #-----------------------------------------------------------------------------------------------------------
 @$drain = ( on_end = null ) ->
-  return $pull_drain() unless on_end?
-  return $pull_drain null, ( error ) ->
-    throw error if error?
-    on_end()
+  if on_end?
+    R = $pull_drain null, ( error ) ->
+      throw error if error?
+      on_end()
+  else
+    R = $pull_drain()
+  return @mark_as_sink R
 
 #-----------------------------------------------------------------------------------------------------------
 @new_pausable = -> ( require 'pull-pause' )()

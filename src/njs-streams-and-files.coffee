@@ -58,7 +58,7 @@ defer                     = setImmediate
     when 3
     else throw new Error "µ9983 expected 1 to 3 arguments, got #{arity}"
   #.........................................................................................................
-  return @write_to_nodejs_stream ( FS.createWriteStream path, options ), on_stop
+  return @mark_as_sink @write_to_nodejs_stream ( FS.createWriteStream path, options ), on_stop
 
 #-----------------------------------------------------------------------------------------------------------
 @read_from_nodejs_stream = ( stream ) ->
@@ -98,11 +98,11 @@ defer                     = setImmediate
     return null
   #.........................................................................................................
   stream.on 'close', -> finish()
-  return TO_PULL_STREAM.sink stream, ( error ) -> finish error
+  return @mark_as_sink TO_PULL_STREAM.sink stream, ( error ) -> finish error
 
 #-----------------------------------------------------------------------------------------------------------
 @node_stream_from_source = ( source ) -> TO_NODE_STREAM.source source
-@node_stream_from_sink   = ( sink   ) -> TO_NODE_STREAM.sink   sink
+@node_stream_from_sink   = ( sink   ) -> @mark_as_sink TO_NODE_STREAM.sink sink
 
 
 
