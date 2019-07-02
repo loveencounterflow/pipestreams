@@ -504,10 +504,10 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
-@$pass        =                   -> map ( data ) => data
-@$end_if      = ( filter )        -> @$ ( d, send ) -> if (     filter d ) then send.end() else send d
-@$continue_if = ( filter )        -> @$ ( d, send ) -> if ( not filter d ) then send.end() else send d
-@mark_as_sink = ( method )        -> method[ Symbol.for 'sink' ] = true; return method
+@$pass        =                         -> map ( data ) => data
+@$end_if      = ( filter )              -> @$ ( d, send ) -> if (     filter d ) then send.end() else send d
+@$continue_if = ( filter )              -> @$ ( d, send ) -> if ( not filter d ) then send.end() else send d
+@mark_as_sink = ( method, description ) -> method[ Symbol.for 'sink' ] = description; return method
 
 #-----------------------------------------------------------------------------------------------------------
 @$drain = ( on_end = null ) ->
@@ -517,7 +517,7 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
       on_end()
   else
     R = $pull_drain()
-  return @mark_as_sink R
+  return @mark_as_sink R, { on_end, }
 
 #-----------------------------------------------------------------------------------------------------------
 @new_pausable = -> ( require 'pull-pause' )()

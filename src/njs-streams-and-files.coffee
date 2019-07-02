@@ -23,7 +23,7 @@ defer                     = setImmediate
     when 1 then null
     when 2
       if CND.isa_function options
-        [ path, options, on_stop, ] = [ path, null, options, ]
+        [ path, options, on_end, ] = [ path, null, options, ]
     else throw new Error "µ9983 expected 1 or 2 arguments, got #{arity}"
   #.........................................................................................................
   return @read_from_nodejs_stream ( FS.createReadStream path, options )
@@ -47,18 +47,21 @@ defer                     = setImmediate
   return source
 
 #-----------------------------------------------------------------------------------------------------------
-@write_to_file = ( path, options, on_stop ) ->
+@write_to_file = ( path, options, on_end ) ->
+  ### TAINT consider to abandon all sinks except `$drain()` and use throughs with writers instead ###
   ### TAINT consider using https://pull-stream.github.io/#pull-write-file instead ###
   ### TAINT code duplication ###
   switch ( arity = arguments.length )
     when 1 then null
     when 2
       if CND.isa_function options
-        [ path, options, on_stop, ] = [ path, null, options, ]
+        [ path, options, on_end, ] = [ path, null, options, ]
     when 3
     else throw new Error "µ9983 expected 1 to 3 arguments, got #{arity}"
   #.........................................................................................................
-  return @mark_as_sink @write_to_nodejs_stream ( FS.createWriteStream path, options ), on_stop
+  R           = @write_to_nodejs_stream ( FS.createWriteStream path, options ), on_end
+  description = { type: 'write_to_file', path, options, on_end, }
+  return @mark_as_sink R, description
 
 #-----------------------------------------------------------------------------------------------------------
 @read_from_nodejs_stream = ( stream ) ->
@@ -69,40 +72,45 @@ defer                     = setImmediate
   return TO_PULL_STREAM.source stream, ( error ) -> finish error
 
 #-----------------------------------------------------------------------------------------------------------
-@write_to_nodejs_stream = ( stream, on_stop ) ->
+@write_to_nodejs_stream = ( stream, on_end ) ->
+  ### TAINT consider to abandon all sinks except `$drain()` and use throughs with writers instead ###
   ### TAINT code duplication ###
   switch ( arity = arguments.length )
     when 1, 2 then null
     else throw new Error "µ9983 expected 1 or 2 arguments, got #{arity}"
   #.........................................................................................................
-  if on_stop? and ( ( type = CND.type_of on_stop ) isnt 'function' )
+  if on_end? and ( ( type = CND.type_of on_end ) isnt 'function' )
     throw new Error "µ9383 expected a function, got a #{type}"
   #.........................................................................................................
   has_finished = false
   #.........................................................................................................
   finish = ( error ) ->
-    ### In case there was an error, throw that error if we already called on_stop, or there is no
-    callback given; this is to prevent silent failures: ###
-    if error? and ( has_finished or ( not on_stop? ) )
+    ### In case there was an error, throw it: ###
+    if error?
       has_finished = true
-      throw error
+      throw error if error?
     #.......................................................................................................
-    ### Otherwise, call back (with optional error) only in case we have not yet finished; this is to
-    prevent inadvertently calling back more than once: ###
     if not has_finished
       has_finished = true
-      if on_stop?
-        return on_stop error if error?
-        return on_stop()
+      on_end() if on_end?
     #.......................................................................................................
     return null
   #.........................................................................................................
   stream.on 'close', -> finish()
-  return @mark_as_sink TO_PULL_STREAM.sink stream, ( error ) -> finish error
+  #.........................................................................................................
+  R           = TO_PULL_STREAM.sink stream, ( error ) -> finish error
+  description = { type: 'write_to_nodejs_stream', stream, on_end, }
+  return @mark_as_sink R, description
 
 #-----------------------------------------------------------------------------------------------------------
 @node_stream_from_source = ( source ) -> TO_NODE_STREAM.source source
-@node_stream_from_sink   = ( sink   ) -> @mark_as_sink TO_NODE_STREAM.sink sink
+
+#-----------------------------------------------------------------------------------------------------------
+@node_stream_from_sink = ( sink ) ->
+  ### TAINT consider to abandon all sinks except `$drain()` and use throughs with writers instead ###
+  R           = TO_NODE_STREAM.sink sink
+  description = { type: 'node_stream_from_sink', sink, }
+  return @mark_as_sink R, description
 
 
 
