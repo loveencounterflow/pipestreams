@@ -517,7 +517,7 @@ e.g. `$surround { first: 'first!', between: 'to appear in-between two values', }
       on_end()
   else
     R = $pull_drain()
-  return @mark_as_sink R, { on_end, }
+  return @mark_as_sink R, { type: '$drain', on_end, }
 
 #-----------------------------------------------------------------------------------------------------------
 @new_pausable = -> ( require 'pull-pause' )()
