@@ -48,10 +48,7 @@ class Pipestreams extends Multimix
 ############################################################################################################
 module.exports  = L = new Pipestreams()
 L.Pipestreams   = Pipestreams
-do ->
-  for key, value of L
-    L[ key ] = value.bind L if isa.function value
-  return null
+
 
 
 

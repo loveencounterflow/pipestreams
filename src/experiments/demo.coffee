@@ -17,7 +17,7 @@ urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 PS                        = require '../..'
 { $
-  $watch }                = PS
+  $watch }                = PS.export()
 first                     = Symbol 'first'
 last                      = Symbol 'last'
 first                     = Symbol 'first'

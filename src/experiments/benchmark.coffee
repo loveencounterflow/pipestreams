@@ -59,7 +59,7 @@ S.implementation          = 'pipestreams-map'
 test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
-{ $, $async, }            = PS
+{ $, $async, }            = PS.export()
 #...........................................................................................................
 ### Avoid to try to require `v8-profiler` when running this module with `devtool`: ###
 S.running_in_devtools     = console.profile?

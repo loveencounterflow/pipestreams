@@ -59,7 +59,7 @@ new_pipestreams_library = ( end_symbol = null ) ->
   PS                        = new_pipestreams_library my_end_sym
   debug PS.symbols
   { $
-    $async }                = PS
+    $async }                = PS.export()
   #.........................................................................................................
   aborting_map = ( use_defer, mapper ) ->
     react = ( handler, data ) ->

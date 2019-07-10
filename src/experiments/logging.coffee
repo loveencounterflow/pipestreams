@@ -24,7 +24,7 @@ defer                     = setImmediate
   is_empty }              = CND
 #...........................................................................................................
 PS                        = require '../..'
-{ $, $async, }            = PS
+{ $, $async, }            = PS.export()
 test                      = require 'guy-test'
 assign                    = Object.assign
 { inspect, }              = require 'util'

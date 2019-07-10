@@ -20,7 +20,7 @@ echo                      = CND.echo.bind CND
 test                      = require 'guy-test'
 PS                        = require '../..'
 { $
-  $async }                = PS
+  $async }                = PS.export()
 
 
 #-----------------------------------------------------------------------------------------------------------

@@ -22,7 +22,10 @@ OS                        = require 'os'
 test                      = require 'guy-test'
 #...........................................................................................................
 PS                        = require '../..'
-{ $, $async, }            = PS
+{ $
+  new_value_source
+  new_random_async_value_source
+  $async }                = PS.export()
 #...........................................................................................................
 { jr
   is_empty }              = CND
@@ -59,8 +62,8 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
         use_defer_3
         a
         b ]               = probe
-      source_a            = PS.new_value_source a
-      source_b            = PS.new_value_source b
+      source_a            = new_value_source a
+      source_b            = new_value_source b
       collector           = []
       clientline          = []
       clientline.push source_a
@@ -235,7 +238,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
       byline.push PS.$drain()
       bystream  = PS.pull byline...
       #.....................................................................................................
-      mainline.push PS.new_value_source probe
+      mainline.push new_value_source probe
       mainline.push PS.$tee is_odd, bystream
       mainline.push PS.$show title: 'mainstream'
       mainline.push PS.$watch ( d ) -> all_numbers.push d
@@ -270,7 +273,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
       byline.push PS.$drain()
       bystream  = PS.pull byline...
       #.....................................................................................................
-      mainline.push PS.new_value_source probe
+      mainline.push new_value_source probe
       mainline.push PS.$bifurcate is_even, bystream
       mainline.push PS.$show title: 'mainstream'
       mainline.push PS.$watch ( d ) -> odd_numbers.push d
@@ -287,7 +290,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
 #-----------------------------------------------------------------------------------------------------------
 @[ "wye from asnyc random sources" ] = ( T, done ) ->
   ### A mainstream and a bystream are created from lists of values using
-  `PS.new_random_async_value_source()`. Values from both streams are marked up for their respective source.
+  `new_random_async_value_source()`. Values from both streams are marked up for their respective source.
   After being funnelled together using `PS.$wye()`, the result is a POD whose keys are the source names
   and whose values are lists of the values in the order they were seen. The expected result is that the
   ordering of each stream is preserved, no values get lost, and that relative ordering of values in the
@@ -303,7 +306,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
     #.......................................................................................................
     await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
       byline    = []
-      byline.push PS.new_random_async_value_source 0.1, probe[ 0 ]
+      byline.push new_random_async_value_source 0.1, probe[ 0 ]
       byline.push $ ( d, send ) -> send [ 'bystream', d, ]
       # byline.push PS.$watch ( d ) -> debug '37333', 'bystream', xrpr d
       # byline.push $ { first: 'first', last: 'last', }, ( d, send ) ->
@@ -311,7 +314,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
       #   else                              whisper 'bystream', xrpr d
       #.....................................................................................................
       mainline = []
-      mainline.push PS.new_random_async_value_source probe[ 1 ]
+      mainline.push new_random_async_value_source probe[ 1 ]
       mainline.push $ ( d, send ) -> send [ 'mainstream', d, ]
       mainline.push PS.$wye PS.pull byline...
       # mainline.push $ { first: 'first', last: 'last', }, ( d, send ) ->
@@ -405,11 +408,11 @@ new_filtered_bysink = ( name, collector, filter ) ->
       byline              = []
       mainline            = []
       #.....................................................................................................
-      byline.push ( if use_bystream_vs then PS.new_value_source else PS.new_random_async_value_source ) byline_values
+      byline.push ( if use_bystream_vs then new_value_source else new_random_async_value_source ) byline_values
       byline.push PS.$show title: 'bystream'
       bystream            = PS.pull byline...
       #.....................................................................................................
-      mainline.push ( if use_mainstream_vs then PS.new_value_source else PS.new_random_async_value_source ) mainline_values
+      mainline.push ( if use_mainstream_vs then new_value_source else new_random_async_value_source ) mainline_values
       mainline.push PS.$show title: 'mainstream'
       # mainline.push PS.$defer()
       mainline.push PS.$wye bystream
@@ -442,7 +445,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
   situated in the mainline.
 
   For unknown reasons, the construct does not work with
-  `PS.new_random_async_value_source()`.
+  `new_random_async_value_source()`.
   ###
   probes_and_matchers = [
     [[true,false,["a","fine","day"]],["a****","fine*","day**"],null]
@@ -474,8 +477,8 @@ new_filtered_bysink = ( name, collector, filter ) ->
       #.....................................................................................................
       pausable = PS.new_pausable()
       mainline = []
-      if      use_mainstream_vs then  mainline.push PS.new_value_source               mainline_values
-      else                            mainline.push PS.new_random_async_value_source  mainline_values
+      if      use_mainstream_vs then  mainline.push new_value_source               mainline_values
+      else                            mainline.push new_random_async_value_source  mainline_values
       mainline.push PS.$show title: 'mainstream'
       mainline.push PS.$defer() if use_defer_1
       mainline.push pausable
@@ -546,7 +549,7 @@ new_filtered_bysink = ( name, collector, filter ) ->
       byline.push $ ( d, send ) -> send d * 3 + 1
       bystream = PS.pull byline...
       #.........................................................................................................
-      mainline.push PS.new_value_source values
+      mainline.push new_value_source values
       mainline.push PS.$defer() if use_defer_1
       mainline.push PS.$wye bystream, defer: true
       mainline.push PS.$defer() if use_defer_2

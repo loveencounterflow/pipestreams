@@ -24,7 +24,7 @@ defer                     = setImmediate
   is_empty }              = CND
 #...........................................................................................................
 # PS                        = require '../..'
-# { $, $async, }            = PS
+# { $, $async, }            = PS.export()
 { inspect, }              = require 'util'
 xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infinity, maxArrayLength: Infinity, depth: Infinity, }
 #...........................................................................................................
