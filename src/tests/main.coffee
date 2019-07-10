@@ -16,7 +16,6 @@ echo                      = CND.echo.bind CND
 #...........................................................................................................
 PATH                      = require 'path'
 FS                        = require 'fs'
-OS                        = require 'os'
 test                      = require 'guy-test'
 
 
@@ -35,5 +34,4 @@ do ->
       throw new Error "duplicate key #{rpr key}" if L[ key ]?
       L[ key ] = value.bind L
   test L, { timeout: 5000, }
-  help "tested:"
 

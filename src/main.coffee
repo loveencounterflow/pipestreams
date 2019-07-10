@@ -26,7 +26,7 @@ Multimix                  = require 'multimix'
 
 
 #-----------------------------------------------------------------------------------------------------------
-class @Pipestreams extends Multimix
+class Pipestreams extends Multimix
   # @extend   object_with_class_properties
   @include require './basics'
   @include require './logging'
@@ -46,7 +46,8 @@ class @Pipestreams extends Multimix
     # declarations.declare_types.apply @
 
 ############################################################################################################
-module.exports = L = new @Pipestreams()
+module.exports  = L = new Pipestreams()
+L.Pipestreams   = Pipestreams
 do ->
   for key, value of L
     L[ key ] = value.bind L if isa.function value
