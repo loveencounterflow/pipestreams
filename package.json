@@ -28,9 +28,9 @@
   "dependencies": {
     "cnd": "^4.6.0",
     "get-source": "^1.0.37",
-    "globby": "^9.2.0",
     "intertype": "^2.5.0",
     "lodash.flattendeep": "^4.4.0",
+    "multimix": "^2.0.0",
     "pull-cont": "^0.1.1",
     "pull-map-last": "^1.0.0",
     "pull-merge": "^1.0.4",
